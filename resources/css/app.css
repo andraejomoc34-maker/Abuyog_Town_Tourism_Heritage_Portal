@@ -3,11 +3,18 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
+@font-face {
+    font-family: 'Barabara';
+    src: url('../../public/fonts/BARABARA-Regular.ttf/BARABARA-FINAL/BARABARA-FINAL.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
 @theme {
-    --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+    --font-sans: 'Barabara', sans-serif;
+    --font-serif: 'Barabara', sans-serif;
+    --font-mono: 'Barabara', sans-serif;
 }
 
 :root {
@@ -21,11 +28,24 @@
 }
 * {
     box-sizing: border-box;
+    font-family: inherit;
+}
+html {
+    font-family: 'Barabara', sans-serif;
 }
 body {
     margin: 0;
     background: var(--cream);
     color: var(--ink);
+    line-height: 1.5;
+}
+button,
+input,
+textarea,
+select,
+option,
+::placeholder {
+    font-family: 'Barabara', sans-serif;
 }
 a {
     color: inherit;
@@ -33,7 +53,7 @@ a {
 .auth-layout {
     display: grid;
     min-height: 100vh;
-    grid-template-columns: minmax(420px, 0.92fr) minmax(520px, 1.08fr);
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
 }
 .auth-visual {
     position: relative;
@@ -71,6 +91,9 @@ a {
     justify-content: space-between;
     gap: 20px;
 }
+.auth-visual__topline {
+    z-index: 20;
+}
 .auth-visual__copy {
     max-width: 510px;
     margin-top: auto;
@@ -80,7 +103,7 @@ a {
 .auth-visual__copy h1 {
     max-width: 450px;
     margin: 12px 0 22px;
-    font-family: Georgia, serif;
+    font-family: 'Barabara', sans-serif;
     font-size: clamp(3rem, 5vw, 5.2rem);
     font-weight: 400;
     line-height: 0.99;
@@ -173,7 +196,7 @@ a {
 .auth-heading h2 {
     margin: 0 0 10px;
     color: var(--forest);
-    font-family: Georgia, serif;
+    font-family: 'Barabara', sans-serif;
     font-size: 2.45rem;
     font-weight: 400;
     letter-spacing: -0.8px;
@@ -300,6 +323,12 @@ a {
     color: #4285f4;
     font-size: 1.05rem;
     font-weight: 700;
+}
+.facebook-mark {
+    color: #1877f2;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1;
 }
 .auth-divider {
     display: flex;

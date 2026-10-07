@@ -1,0 +1,37 @@
+Loading composer repositories with package information
+Updating dependencies
+Lock file operations: 5 installs, 22 updates, 0 removals
+  - Upgrading doctrine/lexer (3.0.2 => 3.0.3)
+  - Locking firebase/php-jwt (v7.2.1)
+  - Upgrading laravel/framework (v13.33.0 => v13.34.0)
+  - Locking laravel/socialite (v5.31.0)
+  - Locking league/oauth1-client (v1.12.0)
+  - Upgrading monolog/monolog (3.12.0 => 3.12.1)
+  - Upgrading nesbot/carbon (3.14.0 => 3.14.2)
+  - Locking paragonie/constant_time_encoding (v3.1.3)
+  - Locking phpseclib/phpseclib (4.0.1)
+  - Upgrading symfony/console (v7.4.19 => v7.4.20)
+  - Upgrading symfony/error-handler (v7.4.17 => v7.4.20)
+  - Upgrading symfony/finder (v7.4.19 => v7.4.20)
+  - Upgrading symfony/http-foundation (v7.4.19 => v7.4.20)
+  - Upgrading symfony/http-kernel (v7.4.19 => v7.4.20)
+  - Upgrading symfony/polyfill-intl-grapheme (v1.41.0 => v1.43.0)
+  - Upgrading symfony/polyfill-intl-idn (v1.42.0 => v1.43.0)
+  - Upgrading symfony/polyfill-intl-normalizer (v1.42.0 => v1.43.0)
+  - Upgrading symfony/polyfill-mbstring (v1.38.2 => v1.43.0)
+  - Upgrading symfony/polyfill-php80 (v1.37.0 => v1.43.0)
+  - Upgrading symfony/polyfill-php82 (v1.38.1 => v1.43.0)
+  - Upgrading symfony/polyfill-php83 (v1.41.0 => v1.43.0)
+  - Upgrading symfony/polyfill-php84 (v1.38.1 => v1.43.0)
+  - Upgrading symfony/polyfill-php85 (v1.41.0 => v1.43.0)
+  - Upgrading symfony/polyfill-php86 (v1.41.0 => v1.43.0)
+  - Upgrading symfony/polyfill-uuid (v1.37.0 => v1.43.0)
+  - Upgrading symfony/routing (v7.4.18 => v7.4.20)
+  - Upgrading symfony/uid (v7.4.17 => v7.4.20)
+Writing lock file
+Installing dependencies from lock file (including require-dev)
+Nothing to install, update or remove
+4 package suggestions were added by new dependencies, use `composer suggest` to see details.
+Generating optimized autoload files
+^CTerminate batch job (Y/N)? 
+^C

@@ -12,6 +12,15 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            announcements?: Array<{
+                id: number;
+                title: string;
+                slug: string;
+                excerpt: string | null;
+                category: string;
+                featuredImageUrl: string | null;
+                publishedAt: string | null;
+            }>;
             [key: string]: unknown;
         };
     }

@@ -1,13 +1,12 @@
 import { Link, router } from '@inertiajs/react';
+import PublicMobileMenu from './PublicMobileMenu';
 
 export default function AuthenticatedNavigation() {
     return (
         <header className="bg-[#123d36] text-white">
-            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-8 gap-y-4 px-6 py-5 lg:px-10">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-10">
                 <Link href="/" className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">
-                        {'\u2726'}
-                    </span>
+                    <img src="/Bee%20Symbol.jpg" alt="Bee Symbol" className="h-10 w-10 shrink-0 object-contain" />
                     <span>
                         <strong className="block text-sm tracking-[0.24em]">
                             ABUYOG TOURISM
@@ -18,7 +17,7 @@ export default function AuthenticatedNavigation() {
                     </span>
                 </Link>
                 <nav
-                    className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-white/80"
+                    className="hidden items-center gap-x-5 gap-y-2 text-xs font-medium text-white/80 lg:flex"
                     aria-label="Main navigation"
                 >
                     <Link className="hover:text-[#e4b866]" href="/">
@@ -46,10 +45,11 @@ export default function AuthenticatedNavigation() {
                 <button
                     type="button"
                     onClick={() => router.post('/logout')}
-                    className="rounded-full border border-white/40 px-4 py-2 text-xs font-semibold transition hover:bg-white/10"
+                    className="hidden rounded-none border border-white/40 px-4 py-2 text-xs font-semibold transition hover:bg-white/10 lg:inline-flex"
                 >
                     Log out
                 </button>
+                <PublicMobileMenu />
             </div>
         </header>
     );

@@ -5,9 +5,14 @@ import AuthenticatedNavigation from '../components/AuthenticatedNavigation';
 export default function Profile() {
     const { auth } = usePage().props;
     const user = auth.user;
-    const form = useForm({
+    const form = useForm<{
+        name: string;
+        email: string;
+        contact_number: string;
+    }>({
         name: user?.name ?? '',
         email: user?.email ?? '',
+        contact_number: user?.contact_number ?? '',
     });
 
     if (!user) {
@@ -83,9 +88,35 @@ export default function Profile() {
                                 </p>
                             )}
                         </div>
+                        <div>
+                            <label
+                                className="mb-2 block text-sm font-semibold"
+                                htmlFor="contact_number"
+                            >
+                                Contact number
+                            </label>
+                            <input
+                                id="contact_number"
+                                type="tel"
+                                className="w-full rounded-sm border border-[#dce3dc] bg-white px-4 py-3 text-sm outline-none focus:border-[#123d36]"
+                                value={form.data.contact_number}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'contact_number',
+                                        event.target.value,
+                                    )
+                                }
+                                autoComplete="tel"
+                            />
+                            {form.errors.contact_number && (
+                                <p className="mt-2 text-sm text-[#a3483f]">
+                                    {form.errors.contact_number}
+                                </p>
+                            )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-5">
                             <button
-                                className="rounded-full bg-[#123d36] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#092c28] disabled:opacity-60"
+                                className="rounded-none bg-[#123d36] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#092c28] disabled:opacity-60"
                                 type="submit"
                                 disabled={form.processing}
                             >

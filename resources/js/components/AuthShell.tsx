@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { home } from '@/routes';
+import PublicMobileMenu from './PublicMobileMenu';
 
 type AuthShellProps = {
     eyebrow: string;
@@ -36,6 +37,7 @@ export default function AuthShell({
                         <span className="location-pill">
                             LEYTE · PHILIPPINES
                         </span>
+                        <PublicMobileMenu />
                     </div>
                     <div className="auth-visual__copy">
                         <p className="eyebrow eyebrow--light">{eyebrow}</p>

@@ -73,11 +73,11 @@ export default function Login() {
                 </button>
             </form>
             <div className="auth-divider">
-                <span>or continue with</span>
+                <span>or</span>
             </div>
-            <button className="button button--social" type="button">
-                <span className="google-mark">G</span> Continue with Google
-            </button>
+            <a className="button button--social" href="/auth/facebook">
+                <span className="facebook-mark">f</span> Continue with Facebook
+            </a>
             <p className="auth-switch">
                 Don&apos;t have an account?{' '}
                 <Link href={register().url}>Create an account</Link>

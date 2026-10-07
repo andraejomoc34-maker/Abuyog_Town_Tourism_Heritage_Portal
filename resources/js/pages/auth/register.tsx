@@ -8,6 +8,7 @@ export default function Register() {
     const form = useForm({
         name: '',
         email: '',
+        contact_number: '',
         password: '',
         password_confirmation: '',
         terms: false,
@@ -55,6 +56,21 @@ export default function Register() {
                 />
                 {form.errors.email && (
                     <span className="field-error">{form.errors.email}</span>
+                )}
+                <label htmlFor="contact_number">Contact number</label>
+                <input
+                    id="contact_number"
+                    type="tel"
+                    value={form.data.contact_number}
+                    onChange={(event) =>
+                        form.setData('contact_number', event.target.value)
+                    }
+                    autoComplete="tel"
+                />
+                {form.errors.contact_number && (
+                    <span className="field-error">
+                        {form.errors.contact_number}
+                    </span>
                 )}
                 <label htmlFor="password">Password</label>
                 <input
@@ -110,9 +126,9 @@ export default function Register() {
             <div className="auth-divider">
                 <span>or</span>
             </div>
-            <button className="button button--social" type="button">
-                <span className="google-mark">G</span> Continue with Google
-            </button>
+            <a className="button button--social" href="/auth/facebook">
+                <span className="facebook-mark">f</span> Continue with Facebook
+            </a>
             <p className="auth-switch">
                 Already have an account? <Link href={login().url}>Login</Link>
             </p>
