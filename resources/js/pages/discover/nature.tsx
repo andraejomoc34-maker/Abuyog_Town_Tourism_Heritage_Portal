@@ -1,42 +1,62 @@
+import { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { Search, X } from 'lucide-react';
 import PublicMobileMenu from '../../components/PublicMobileMenu';
+
+const categories = [
+    'All Destinations',
+    'Waterfalls',
+    'Beaches & Shoreline',
+    'Rivers & Nature',
+    'Resorts',
+] as const;
+
+type DestinationCategory = (typeof categories)[number];
 
 const places = [
     {
         title: 'Coastal Landscapes',
-        category: 'Beaches & shoreline',
+        category: 'Beaches & Shoreline',
+        filterCategories: ['Beaches & Shoreline'],
         location: 'Abuyog, Leyte',
         description:
             'Discover open shoreline and coastal scenery. Check local guidance before planning a visit.',
         image: '/island-paradise-3.jpg',
         alt: 'Coastal scenery used as a sample nature destination image',
+        href: '/discover',
     },
     {
-        title: 'Castanias Resort & Riverside',
-        category: 'Rivers',
+        title: 'Castañas Resort & Riverside',
+        category: 'Rivers & Nature',
+        filterCategories: ['Rivers & Nature', 'Resorts'],
         location: 'Abuyog area, Leyte',
         description:
             'Find a quieter pace among the waterways and green landscapes of the area.',
         image: '/abuyog-2.jpg',
         alt: 'Green landscape used as a sample riverside destination image',
+        href: '/resorts',
     },
     {
         title: 'Valida Mountain Resort',
-        category: 'Mountains & trails',
+        category: 'Resorts',
+        filterCategories: ['Resorts'],
         location: 'Abuyog area, Leyte',
         description:
             'Explore the region’s natural scenery. Confirm trail access and conditions locally.',
         image: '/abuyog-4.jpg',
         alt: 'Natural landscape used as a sample mountain destination image',
+        href: '/resorts',
     },
     {
-        title: 'Malaguicay Falls',
+        title: 'Maliguicay Falls',
         category: 'Waterfalls',
+        filterCategories: ['Waterfalls'],
         location: 'Abuyog area, Leyte',
         description:
             'Use this sample listing as a starting point for finding waterfalls and nearby nature spots.',
         image: '/abuyog-9.jpg',
         alt: 'Tropical greenery used as a sample waterfall destination image',
+        href: '/resorts',
     },
 ];
 
@@ -94,6 +114,28 @@ function PageNavigation() {
 }
 
 export default function Nature() {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeCategory, setActiveCategory] =
+        useState<DestinationCategory>('All Destinations');
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    const filteredPlaces = places.filter((place) => {
+        const matchesCategory =
+            activeCategory === 'All Destinations' ||
+            place.filterCategories.includes(activeCategory);
+        const matchesSearch =
+            normalizedQuery.length === 0 ||
+            `${place.title} ${place.category} ${place.location} ${place.description}`
+                .toLocaleLowerCase()
+                .includes(normalizedQuery);
+
+        return matchesCategory && matchesSearch;
+    });
+
+    function clearFilters() {
+        setSearchQuery('');
+        setActiveCategory('All Destinations');
+    }
+
     return (
         <>
             <Head title="Natural Wonders of Abuyog" />
@@ -129,52 +171,113 @@ export default function Nature() {
                             Find your kind of escape.
                         </h2>
                         <p className="mt-4 text-sm leading-7 text-[#718078]">
-                            Browse these sample nature categories for beaches,
-                            rivers, mountains, waterfalls, and other
-                            destinations. Confirm access and visitor information
-                            locally before traveling.
+                            Discover waterfalls, coastal scenery, riverside
+                            destinations, and outdoor escapes around Abuyog,
+                            Leyte.
                         </p>
                     </div>
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {places.map((place) => (
-                            <article
-                                className="group overflow-hidden rounded-2xl bg-white shadow-[0_12px_35px_rgba(31,54,44,.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(31,54,44,.15)]"
-                                key={place.title}
-                            >
-                                <div className="h-56 overflow-hidden bg-[#e8ede7]">
-                                    <img
-                                        alt={place.alt}
-                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                                        loading="lazy"
-                                        src={place.image}
-                                    />
-                                </div>
-                                <div className="p-6">
-                                    <p className="text-[10px] font-bold tracking-[0.16em] text-[#bd8b3d]">
-                                        {place.category}
-                                    </p>
-                                    <h3 className="mt-2 font-serif text-2xl text-[#173c34]">
-                                        {place.title}
-                                    </h3>
-                                    <p className="mt-3 flex items-center gap-2 text-xs text-[#718078]">
-                                        ⌖ {place.location}
-                                    </p>
-                                    <p className="mt-4 min-h-14 text-sm leading-6 text-[#718078]">
-                                        {place.description}
-                                    </p>
-                                    <Link
-                                        className="mt-5 inline-flex items-center text-xs font-bold tracking-[0.12em] text-[#9b6a28] transition hover:text-[#173c34]"
-                                        href="/#discover"
-                                    >
-                                        VIEW DETAILS{' '}
-                                        <span className="ml-2 text-base">
-                                            {'\u2197'}
-                                        </span>
-                                    </Link>
-                                </div>
-                            </article>
-                        ))}
+                    <div className="mb-8 space-y-5">
+                        <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#dedfd8] bg-white px-4 text-[#718078] focus-within:border-[#bd8b3d]">
+                            <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
+                            <input
+                                aria-label="Search destinations in Abuyog"
+                                className="min-w-0 flex-1 border-0 bg-transparent py-3 text-sm text-[#173c34] outline-none placeholder:text-[#718078] focus:ring-0"
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                placeholder="Search destinations in Abuyog…"
+                                type="search"
+                                value={searchQuery}
+                            />
+                            {searchQuery.length > 0 && (
+                                <button
+                                    aria-label="Clear search"
+                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#718078] transition hover:bg-[#f0eadc] hover:text-[#173c34]"
+                                    onClick={() => setSearchQuery('')}
+                                    type="button"
+                                >
+                                    <X aria-hidden="true" className="h-4 w-4" />
+                                </button>
+                            )}
+                        </label>
+                        <div
+                            aria-label="Filter destinations by category"
+                            className="flex flex-wrap gap-2"
+                            role="group"
+                        >
+                            {categories.map((category) => (
+                                <button
+                                    aria-pressed={activeCategory === category}
+                                    className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+                                        activeCategory === category
+                                            ? 'border-[#173c34] bg-[#173c34] text-white'
+                                            : 'border-[#dedfd8] bg-white text-[#53645d] hover:border-[#bd8b3d] hover:text-[#173c34]'
+                                    }`}
+                                    key={category}
+                                    onClick={() => setActiveCategory(category)}
+                                    type="button"
+                                >
+                                    {category}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+                    {filteredPlaces.length > 0 ? (
+                        <div className="grid items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredPlaces.map((place) => (
+                                <article
+                                    className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_12px_35px_rgba(31,54,44,.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(31,54,44,.15)]"
+                                    key={place.title}
+                                >
+                                    <div className="h-56 shrink-0 overflow-hidden bg-[#e8ede7]">
+                                        <img
+                                            alt={place.alt}
+                                            className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                                            loading="lazy"
+                                            src={place.image}
+                                        />
+                                    </div>
+                                    <div className="flex flex-1 flex-col p-6">
+                                        <p className="text-[10px] font-bold tracking-[0.16em] text-[#bd8b3d]">
+                                            {place.category}
+                                        </p>
+                                        <h3 className="mt-2 font-serif text-2xl text-[#173c34]">
+                                            {place.title}
+                                        </h3>
+                                        <p className="mt-3 flex items-center gap-2 text-xs text-[#718078]">
+                                            ⌖ {place.location}
+                                        </p>
+                                        <p className="mt-4 min-h-14 flex-1 text-sm leading-6 text-[#718078]">
+                                            {place.description}
+                                        </p>
+                                        <Link
+                                            className="mt-5 inline-flex items-center text-xs font-bold tracking-[0.12em] text-[#9b6a28] transition hover:text-[#173c34]"
+                                            href={place.href}
+                                        >
+                                            VIEW DETAILS{' '}
+                                            <span className="ml-2 text-base">
+                                                {'\u2197'}
+                                            </span>
+                                        </Link>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-2xl border border-[#dedfd8] bg-white px-6 py-12 text-center">
+                            <h3 className="font-serif text-2xl text-[#173c34]">
+                                No destinations found
+                            </h3>
+                            <p className="mt-2 text-sm text-[#718078]">
+                                Try another search or clear the filters to see all destinations.
+                            </p>
+                            <button
+                                className="mt-5 inline-flex items-center rounded-full bg-[#173c34] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#24564b]"
+                                onClick={clearFilters}
+                                type="button"
+                            >
+                                Show all destinations
+                            </button>
+                        </div>
+                    )}
                 </main>
                 <footer className="border-t border-[#dedfd8] bg-[#f0eadc] px-6 py-8 lg:px-10">
                     <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 text-xs text-[#718078]">

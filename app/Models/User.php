@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -20,16 +21,19 @@ use Illuminate\Support\Carbon;
  * @property int|null $resort_id
  * @property Carbon|null $email_verified_at
  * @property string $password
+ * @property string|null $profile_photo_path
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'contact_number', 'password', 'role', 'resort_id', 'facebook_id', 'facebook_avatar', 'is_active'])]
+#[Fillable(['name', 'email', 'contact_number', 'password', 'role', 'resort_id', 'facebook_id', 'facebook_avatar', 'profile_photo_path', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected $appends = ['avatar'];
 
     protected $attributes = [
         'role' => 'user',
@@ -51,8 +55,18 @@ class User extends Authenticatable
             'contact_number' => 'string',
             'facebook_id' => 'string',
             'facebook_avatar' => 'string',
+            'profile_photo_path' => 'string',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function getAvatarAttribute(): ?string
+    {
+        if ($this->profile_photo_path) {
+            return Storage::disk('public')->url($this->profile_photo_path);
+        }
+
+        return $this->facebook_avatar;
     }
 
     public function resort(): BelongsTo

@@ -211,7 +211,7 @@ export default function TravelGuide() {
                                 href="https://www.google.com/maps/search/?api=1&query=Abuyog+Leyte+Philippines"
                                 target="_blank"
                                 rel="noreferrer"
-                                className="mt-6 inline-flex rounded-none bg-[#173c34] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-[#1f4b43]"
+                                className="mt-6 inline-flex rounded-none bg-white px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-[#1f4b43]"
                             >
                                 Get Directions
                             </a>
@@ -262,7 +262,7 @@ export default function TravelGuide() {
                         <Link href="/map" className="rounded-none border border-[#173c34] px-5 py-3 text-sm font-semibold text-[#173c34] transition hover:bg-[#173c34] hover:text-white">
                             Explore the Map
                         </Link>
-                        <Link href="/resorts" className="rounded-none bg-[#123d36] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-[#1c4d45]">
+                        <Link href="/resorts" className="rounded-none bg-gold px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-1 hover:bg-[#1c4d45]">
                             View Resorts
                         </Link>
                     </div>

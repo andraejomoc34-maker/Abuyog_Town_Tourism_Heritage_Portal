@@ -1,5 +1,11 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type ChangeEvent,
+    type FormEvent,
+} from 'react';
 import AuthenticatedNavigation from '../components/AuthenticatedNavigation';
 
 export default function Profile() {
@@ -9,11 +15,28 @@ export default function Profile() {
         name: string;
         email: string;
         contact_number: string;
+        profile_photo: File | null;
     }>({
         name: user?.name ?? '',
         email: user?.email ?? '',
         contact_number: user?.contact_number ?? '',
+        profile_photo: null,
     });
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!form.data.profile_photo) {
+            setPhotoPreviewUrl(null);
+
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(form.data.profile_photo);
+        setPhotoPreviewUrl(previewUrl);
+
+        return () => URL.revokeObjectURL(previewUrl);
+    }, [form.data.profile_photo]);
 
     if (!user) {
         return null;
@@ -21,7 +44,37 @@ export default function Profile() {
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        form.patch('/profile');
+        form.transform((data) => ({ ...data, _method: 'patch' }));
+        form.post('/profile', {
+            forceFormData: true,
+            onSuccess: () => form.setData('profile_photo', null),
+        });
+    }
+
+    function selectProfilePhoto(event: ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const acceptedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+        const acceptedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+        if (
+            !acceptedExtensions.includes(extension ?? '') ||
+            (file.type && !acceptedMimeTypes.includes(file.type))
+        ) {
+            form.setError('profile_photo', 'Choose a JPG, PNG, or WEBP image.');
+            event.target.value = '';
+
+            return;
+        }
+
+        form.clearErrors('profile_photo');
+        form.setData('profile_photo', file);
+        event.target.value = '';
     }
 
     return (
@@ -43,6 +96,52 @@ export default function Profile() {
                         className="mt-10 max-w-xl space-y-6 border-t border-[#dce3dc] py-8"
                         onSubmit={submit}
                     >
+                        <div className="flex items-center gap-5">
+                            <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e8eee8] text-xl font-semibold text-[#123d36]">
+                                {photoPreviewUrl ? (
+                                    <img
+                                        src={photoPreviewUrl}
+                                        alt="Selected profile photo preview"
+                                        className="size-full object-cover"
+                                    />
+                                ) : user.avatar ? (
+                                    <img
+                                        src={user.avatar}
+                                        alt={`${user.name}'s profile photo`}
+                                        className="size-full object-cover"
+                                    />
+                                ) : (
+                                    user.name.charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-sm font-semibold">Profile photo</p>
+                                <button
+                                    className="rounded-sm border border-[#123d36] px-4 py-2 text-sm font-semibold text-[#123d36] transition hover:bg-[#edf2ed] disabled:opacity-60"
+                                    type="button"
+                                    disabled={form.processing}
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    Change Photo
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    className="sr-only"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    aria-label="Choose a profile photo"
+                                    onChange={selectProfilePhoto}
+                                />
+                                <p className="text-xs text-[#68766f]">
+                                    JPG, PNG, or WEBP, up to 5 MB
+                                </p>
+                                {form.errors.profile_photo && (
+                                    <p className="text-sm text-[#a3483f]">
+                                        {form.errors.profile_photo}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                         <div>
                             <label
                                 className="mb-2 block text-sm font-semibold"

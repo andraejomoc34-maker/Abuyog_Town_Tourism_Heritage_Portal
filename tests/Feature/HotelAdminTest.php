@@ -5,7 +5,9 @@ use App\Models\HotelRoom;
 use App\Models\Resort;
 use App\Models\User;
 use Database\Seeders\AbuyogHotelSeeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 function createHotelForTest(string $name = 'Abuyog Hotel', string $type = 'hotel'): Resort
 {
@@ -118,6 +120,106 @@ it('allows the assigned hotel admin to edit hotel details but not ownership or r
     ]);
 
     $this->get('/hotel-admin')->assertOk();
+});
+
+it('stores uploaded room images on the public disk', function () {
+    Storage::fake('public');
+    $hotel = createHotelForTest();
+    $admin = createHotelAdminForTest($hotel);
+    $imageContents = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
+        true,
+    );
+
+    $this->actingAs($admin)
+        ->from('/hotel-admin/rooms')
+        ->post('/hotel-admin/rooms', [
+            'name' => 'Garden Room',
+            'room_type' => 'Standard',
+            'available_quantity' => 1,
+            'status' => 'Available',
+            'image' => UploadedFile::fake()->createWithContent('garden-room.png', $imageContents),
+        ])
+        ->assertRedirect('/hotel-admin/rooms');
+
+    $room = HotelRoom::query()->firstOrFail();
+
+    expect($room->image)->toStartWith('hotel-rooms/');
+    expect(Storage::disk('public')->exists($room->image))->toBeTrue();
+    expect($room->image_url)->toBe(asset('storage/'.$room->image));
+});
+
+it('rejects unsupported hotel room image formats', function () {
+    Storage::fake('public');
+    $hotel = createHotelForTest();
+    $admin = createHotelAdminForTest($hotel);
+
+    $this->actingAs($admin)
+        ->from('/hotel-admin/rooms')
+        ->post('/hotel-admin/rooms', [
+            'name' => 'Garden Room',
+            'room_type' => 'Standard',
+            'available_quantity' => 1,
+            'status' => 'Available',
+            'image' => UploadedFile::fake()->create('room.gif', 100, 'image/gif'),
+        ])
+        ->assertSessionHasErrors('image');
+
+    $this->assertDatabaseCount('hotel_rooms', 0);
+    expect(Storage::disk('public')->files('hotel-rooms'))->toBeEmpty();
+});
+
+it('replaces or removes only managed room images after a successful update', function () {
+    Storage::fake('public');
+    $hotel = createHotelForTest();
+    $admin = createHotelAdminForTest($hotel);
+    Storage::disk('public')->put('hotel-rooms/current.png', 'current image');
+    Storage::disk('public')->put('legacy/room.png', 'legacy image');
+    $room = HotelRoom::query()->create([
+        'resort_id' => $hotel->id,
+        'name' => 'Garden Room',
+        'room_type' => 'Standard',
+        'available_quantity' => 1,
+        'status' => 'Available',
+        'image' => 'hotel-rooms/current.png',
+    ]);
+    $imageContents = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
+        true,
+    );
+
+    $this->actingAs($admin)
+        ->from('/hotel-admin/rooms')
+        ->post('/hotel-admin/rooms/'.$room->id, [
+            '_method' => 'put',
+            'name' => 'Garden Room',
+            'room_type' => 'Standard',
+            'available_quantity' => 1,
+            'status' => 'Available',
+            'remove_image' => '0',
+            'image' => UploadedFile::fake()->createWithContent('replacement.png', $imageContents),
+        ])
+        ->assertRedirect('/hotel-admin/rooms');
+
+    $replacementPath = $room->fresh()->image;
+    expect($replacementPath)->toStartWith('hotel-rooms/');
+    expect(Storage::disk('public')->exists('hotel-rooms/current.png'))->toBeFalse();
+    expect(Storage::disk('public')->exists($replacementPath))->toBeTrue();
+
+    $this->from('/hotel-admin/rooms')
+        ->post('/hotel-admin/rooms/'.$room->id, [
+            '_method' => 'put',
+            'name' => 'Garden Room',
+            'room_type' => 'Standard',
+            'available_quantity' => 1,
+            'status' => 'Available',
+            'remove_image' => true,
+        ])
+        ->assertRedirect('/hotel-admin/rooms');
+
+    expect($room->fresh()->image)->toBeNull();
+    expect(Storage::disk('public')->exists($replacementPath))->toBeFalse();
+    expect(Storage::disk('public')->exists('legacy/room.png'))->toBeTrue();
 });
 
 it('does not allow hotel admins to view or manage bookings from another property', function () {

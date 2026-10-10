@@ -16,6 +16,7 @@ export default function Login() {
             eyebrow="Welcome back"
             title="Your next story starts here."
             description="Continue discovering the beauty, history, culture, and heritage of Abuyog."
+            visualBackground="/Abuyog-14.jpg"
         >
             <div className="auth-heading">
                 <p className="eyebrow">Member access</p>
@@ -75,7 +76,7 @@ export default function Login() {
             <div className="auth-divider">
                 <span>or</span>
             </div>
-            <a className="button button--social" href="/auth/facebook">
+            <a className="button button--social" href="/auth/facebook/redirect">
                 <span className="facebook-mark">f</span> Continue with Facebook
             </a>
             <p className="auth-switch">

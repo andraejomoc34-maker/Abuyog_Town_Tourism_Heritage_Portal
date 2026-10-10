@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\HotelRoom;
 use App\Models\Resort;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class HotelAdminController extends Controller
 {
@@ -70,7 +74,27 @@ class HotelAdminController extends Controller
     public function storeRoom(Request $request): RedirectResponse
     {
         $hotel = $this->hotelFor($request);
-        $hotel->hotelRooms()->create($this->validatedRoom($request));
+        $validated = $this->validatedRoom($request);
+        $image = $validated['image'] ?? null;
+        unset($validated['image'], $validated['remove_image']);
+        $imagePath = null;
+
+        try {
+            if ($image instanceof UploadedFile) {
+                $imagePath = $this->storeRoomImage($image);
+            }
+
+            $hotel->hotelRooms()->create([
+                ...$validated,
+                'image' => $imagePath,
+            ]);
+        } catch (Throwable $exception) {
+            if ($imagePath !== null) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            throw $exception;
+        }
 
         return back()->with('success', 'Hotel room added.');
     }
@@ -79,23 +103,54 @@ class HotelAdminController extends Controller
     {
         $hotel = $this->hotelFor($request);
         $validated = $this->validatedRoom($request);
-        DB::transaction(function () use ($hotel, $room, $validated): void {
-            $hotelRoom = $hotel->hotelRooms()->whereKey($room)->lockForUpdate()->firstOrFail();
-            $maximumDailyReservations = $hotelRoom->bookings()
-                ->whereIn('status', ['Pending', 'Confirmed'])
-                ->selectRaw('booking_date, COUNT(*) as reservation_count')
-                ->groupBy('booking_date')
-                ->get()
-                ->max('reservation_count') ?? 0;
+        $image = $validated['image'] ?? null;
+        $removeImage = (bool) ($validated['remove_image'] ?? false);
+        unset($validated['image'], $validated['remove_image']);
+        $previousImage = null;
+        $newImagePath = null;
+        $imageWasUpdated = false;
 
-            if ($validated['available_quantity'] < $maximumDailyReservations) {
-                throw ValidationException::withMessages([
-                    'available_quantity' => 'Room quantity cannot be lower than existing pending or confirmed bookings.',
-                ]);
+        try {
+            DB::transaction(function () use ($hotel, $room, &$validated, $image, $removeImage, &$previousImage, &$newImagePath, &$imageWasUpdated): void {
+                /** @var HotelRoom $hotelRoom */
+                $hotelRoom = $hotel->hotelRooms()->whereKey($room)->lockForUpdate()->firstOrFail();
+                $maximumDailyReservations = $hotelRoom->bookings()
+                    ->whereIn('status', ['Pending', 'Confirmed'])
+                    ->selectRaw('booking_date, COUNT(*) as reservation_count')
+                    ->groupBy('booking_date')
+                    ->get()
+                    ->max('reservation_count') ?? 0;
+
+                if ($validated['available_quantity'] < $maximumDailyReservations) {
+                    throw ValidationException::withMessages([
+                        'available_quantity' => 'Room quantity cannot be lower than existing pending or confirmed bookings.',
+                    ]);
+                }
+
+                $previousImage = $hotelRoom->image;
+
+                if ($image instanceof UploadedFile) {
+                    $newImagePath = $this->storeRoomImage($image);
+                    $validated['image'] = $newImagePath;
+                    $imageWasUpdated = true;
+                } elseif ($removeImage) {
+                    $validated['image'] = null;
+                    $imageWasUpdated = true;
+                }
+
+                $hotelRoom->update($validated);
+            });
+        } catch (Throwable $exception) {
+            if ($newImagePath !== null) {
+                Storage::disk('public')->delete($newImagePath);
             }
 
-            $hotelRoom->update($validated);
-        });
+            throw $exception;
+        }
+
+        if ($imageWasUpdated && $previousImage !== $newImagePath) {
+            $this->deleteManagedRoomImage($previousImage);
+        }
 
         return back()->with('success', 'Hotel room updated.');
     }
@@ -210,7 +265,7 @@ class HotelAdminController extends Controller
     }
 
     /**
-     * @return array{name: string, room_type: string, description: ?string, capacity: ?int, price: ?float, available_quantity: int, status: string, image: ?string}
+     * @return array{name: string, room_type: string, description?: ?string, capacity?: ?int, price?: ?float, available_quantity: int, status: string, image?: ?UploadedFile, remove_image?: bool}
      */
     private function validatedRoom(Request $request): array
     {
@@ -222,10 +277,38 @@ class HotelAdminController extends Controller
             'price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'available_quantity' => ['required', 'integer', 'min:0', 'max:10000'],
             'status' => ['required', Rule::in(['Available', 'Maintenance', 'Unavailable'])],
-            'image' => ['nullable', 'string', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_image' => ['sometimes', 'boolean'],
         ]);
 
         return $validated;
+    }
+
+    private function storeRoomImage(UploadedFile $image): string
+    {
+        $path = $image->store('hotel-rooms', 'public');
+
+        if (! is_string($path)) {
+            throw ValidationException::withMessages([
+                'image' => 'The room image could not be stored. Please try again.',
+            ]);
+        }
+
+        return $path;
+    }
+
+    private function deleteManagedRoomImage(?string $image): void
+    {
+        $directory = 'hotel-rooms/';
+
+        if (
+            $image !== null
+            && str_starts_with($image, $directory)
+            && ! str_contains(substr($image, strlen($directory)), '/')
+            && ! str_contains($image, '\\')
+        ) {
+            Storage::disk('public')->delete($image);
+        }
     }
 
     private function hotelFor(Request $request): Resort

@@ -28,6 +28,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'face_liveness' => [
+        'region' => env('AWS_FACE_LIVENESS_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+        'identity_pool_id' => env('AWS_COGNITO_IDENTITY_POOL_ID'),
+        'confidence_threshold' => (float) env('FACE_LIVENESS_CONFIDENCE_THRESHOLD', 80),
+        'local_browser' => true,
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HotelRoom extends Model
 {
+    protected $appends = ['image_url'];
+
     protected $fillable = [
         'resort_id',
         'name',
@@ -27,6 +29,25 @@ class HotelRoom extends Model
             'price' => 'decimal:2',
             'available_quantity' => 'integer',
         ];
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        $image = $this->attributes['image'] ?? null;
+
+        if ($image === null || $image === '') {
+            return null;
+        }
+
+        if (str_starts_with($image, '/') || preg_match('/^https?:\/\//i', $image) === 1) {
+            return $image;
+        }
+
+        if (str_starts_with($image, 'storage/')) {
+            return asset($image);
+        }
+
+        return asset('storage/'.$image);
     }
 
     public function resort(): BelongsTo

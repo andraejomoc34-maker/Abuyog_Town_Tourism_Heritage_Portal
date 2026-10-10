@@ -6,16 +6,19 @@ import {
     ClipboardList,
     DoorOpen,
     Hotel as HotelIcon,
+    ImagePlus,
     LayoutDashboard,
     LogOut,
     Menu,
     Settings,
+    Trash2,
+    Upload,
     UserRound,
     UsersRound,
     X,
     type LucideIcon,
 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
 type Section = 'dashboard' | 'bookings' | 'calendar' | 'rooms' | 'guests' | 'reports' | 'profile' | 'settings';
 type Hotel = {
@@ -36,6 +39,7 @@ type Room = {
     available_quantity: number;
     status: 'Available' | 'Maintenance' | 'Unavailable';
     image?: string | null;
+    image_url?: string | null;
 };
 type Booking = {
     id: number;
@@ -90,6 +94,108 @@ const formatDate = (value?: string | null) => value
     ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : 'Not set';
 
+function getRoomImageUrl(image?: string | null): string | null {
+    if (!image) {
+        return null;
+    }
+
+    if (image.startsWith('/') || /^https?:\/\//i.test(image)) {
+        return image;
+    }
+
+    return `/storage/${image.replace(/^\/+/, '')}`;
+}
+
+function RoomImagePicker({
+    id,
+    currentImage,
+    selectedFile,
+    removeCurrent,
+    onSelect,
+    onRemove,
+    error,
+}: {
+    id: string;
+    currentImage?: string | null;
+    selectedFile: File | null;
+    removeCurrent: boolean;
+    onSelect: (file: File | null) => void;
+    onRemove: () => void;
+    error?: string;
+}) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!selectedFile) {
+            setPreviewUrl(null);
+
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(selectedFile);
+        setPreviewUrl(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [selectedFile]);
+
+    const existingImageUrl = removeCurrent ? null : getRoomImageUrl(currentImage);
+    const imageUrl = previewUrl ?? (selectedFile ? null : existingImageUrl);
+    const fileName = selectedFile?.name ?? (existingImageUrl ? currentImage?.split(/[\\/]/).pop() : null);
+
+    function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+        onSelect(event.target.files?.[0] ?? null);
+        event.target.value = '';
+    }
+
+    return (
+        <div className="mt-1 space-y-3">
+            {imageUrl && (
+                <img
+                    alt="Room image preview"
+                    className="h-32 w-48 rounded-lg border border-[#e5dcc9] bg-[#f8f3e8] object-cover"
+                    src={imageUrl}
+                />
+            )}
+            <input
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                aria-label="Choose a room image"
+                className="hidden"
+                id={id}
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                type="file"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+                <button
+                    className="inline-flex items-center gap-2 border border-[#dcd2c0] bg-white px-3 py-2 text-sm font-semibold text-[#173c34] transition hover:border-[#d99d4b]"
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                >
+                    {imageUrl ? (
+                        <ImagePlus aria-hidden="true" className="h-4 w-4" />
+                    ) : (
+                        <Upload aria-hidden="true" className="h-4 w-4" />
+                    )}
+                    {imageUrl ? 'Change Image' : 'Choose Image'}
+                </button>
+                {imageUrl && (
+                    <button
+                        className="inline-flex items-center gap-2 border border-[#dcd2c0] bg-white px-3 py-2 text-sm font-semibold text-[#815516] transition hover:border-[#d99d4b]"
+                        onClick={onRemove}
+                        type="button"
+                    >
+                        <Trash2 aria-hidden="true" className="h-4 w-4" />
+                        Remove Image
+                    </button>
+                )}
+            </div>
+            {fileName && <p className="text-xs text-[#718078]">{fileName}</p>}
+            {error && <p className="text-xs text-rose-700">{error}</p>}
+        </div>
+    );
+}
+
 const getCalendarCells = (month: string) => {
     const [year, monthNumber] = month.split('-').map(Number);
     const firstDay = new Date(year, monthNumber - 1, 1);
@@ -116,12 +222,25 @@ function RoomEditor({ room }: { room: Room }) {
         price: room.price?.toString() ?? '',
         available_quantity: room.available_quantity,
         status: room.status,
-        image: room.image ?? '',
+        image: null as File | null,
+        remove_image: false,
     });
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        form.put(`/hotel-admin/rooms/${room.id}`, { preserveScroll: true });
+        form.transform((data) => ({
+            ...data,
+            _method: 'put',
+            remove_image: data.remove_image ? '1' : '0',
+        }));
+        form.post(`/hotel-admin/rooms/${room.id}`, {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                form.setData('image', null);
+                form.setData('remove_image', false);
+            },
+        });
     };
 
     return (
@@ -131,7 +250,6 @@ function RoomEditor({ room }: { room: Room }) {
                     <h3 className="text-xl font-semibold text-[#173c34]">{room.name}</h3>
                     <span className={`mt-2 inline-flex rounded-sm px-2.5 py-1 text-xs font-semibold ${roomStatusClasses[room.status]}`}>{room.status}</span>
                 </div>
-                {room.image && <img src={room.image} alt="" className="h-16 w-20 rounded-lg object-cover" />}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-medium">Room name
@@ -162,9 +280,24 @@ function RoomEditor({ room }: { room: Room }) {
                 <label className="text-sm font-medium sm:col-span-2">Description
                     <textarea rows={2} value={form.data.description} onChange={(event) => form.setData('description', event.target.value)} className={formFieldClasses} />
                 </label>
-                <label className="text-sm font-medium sm:col-span-2">Image path
-                    <input value={form.data.image} onChange={(event) => form.setData('image', event.target.value)} className={formFieldClasses} />
-                </label>
+                <div className="text-sm font-medium sm:col-span-2">
+                    <span>Room image</span>
+                    <RoomImagePicker
+                        currentImage={room.image_url ?? room.image}
+                        error={form.errors.image}
+                        id={`room-image-${room.id}`}
+                        onRemove={() => {
+                            form.setData('image', null);
+                            form.setData('remove_image', Boolean(room.image));
+                        }}
+                        onSelect={(file) => {
+                            form.setData('image', file);
+                            form.setData('remove_image', false);
+                        }}
+                        removeCurrent={form.data.remove_image}
+                        selectedFile={form.data.image}
+                    />
+                </div>
             </div>
             <button disabled={form.processing} className="mt-4 rounded-none bg-[#173c34] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">
                 Save room
@@ -214,7 +347,8 @@ export default function HotelDashboard({
         price: '',
         available_quantity: 0,
         status: 'Unavailable',
-        image: '',
+        image: null as File | null,
+        remove_image: false,
     });
     const calendarCells = getCalendarCells(calendarMonth);
     const today = new Date();
@@ -245,7 +379,15 @@ export default function HotelDashboard({
 
     const saveRoom = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        newRoomForm.post('/hotel-admin/rooms', { preserveScroll: true, onSuccess: () => newRoomForm.reset() });
+        newRoomForm.transform((data) => ({
+            ...data,
+            remove_image: data.remove_image ? '1' : '0',
+        }));
+        newRoomForm.post('/hotel-admin/rooms', {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => newRoomForm.reset(),
+        });
     };
 
     const bookingRow = (booking: Booking) => (
@@ -472,7 +614,21 @@ export default function HotelDashboard({
                                             <label className="text-sm font-medium">Available quantity<input type="number" min="0" value={newRoomForm.data.available_quantity} onChange={(event) => newRoomForm.setData('available_quantity', Number(event.target.value))} className={formFieldClasses} required /></label>
                                             <label className="text-sm font-medium">Status<select value={newRoomForm.data.status} onChange={(event) => newRoomForm.setData('status', event.target.value)} className={formFieldClasses}><option>Available</option><option>Maintenance</option><option>Unavailable</option></select></label>
                                             <label className="text-sm font-medium sm:col-span-2">Description<textarea rows={2} value={newRoomForm.data.description} onChange={(event) => newRoomForm.setData('description', event.target.value)} className={formFieldClasses} /></label>
-                                            <label className="text-sm font-medium sm:col-span-2">Image path<input value={newRoomForm.data.image} onChange={(event) => newRoomForm.setData('image', event.target.value)} className={formFieldClasses} /></label>
+                                            <div className="text-sm font-medium sm:col-span-2">
+                                                <span>Room image</span>
+                                                <RoomImagePicker
+                                                    currentImage={null}
+                                                    error={newRoomForm.errors.image}
+                                                    id="new-room-image"
+                                                    onRemove={() => {
+                                                        newRoomForm.setData('image', null);
+                                                        newRoomForm.setData('remove_image', false);
+                                                    }}
+                                                    onSelect={(file) => newRoomForm.setData('image', file)}
+                                                    removeCurrent={false}
+                                                    selectedFile={newRoomForm.data.image}
+                                                />
+                                            </div>
                                         </div>
                                         <button disabled={newRoomForm.processing} className="mt-4 rounded-none bg-[#173c34] px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">Add room</button>
                                     </form>

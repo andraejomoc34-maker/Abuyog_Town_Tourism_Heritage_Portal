@@ -12,6 +12,7 @@ type HotelRoom = {
     available_quantity: number;
     status: string;
     image?: string | null;
+    image_url?: string | null;
 };
 
 type Hotel = {
@@ -269,7 +270,7 @@ export default function AbuyogHotelPage({
                                     const isAvailable = room.status === 'Available' && room.available_quantity > 0;
                                     const roomPrice = formatPrice(room.price);
                                     const roomImageOverride = roomImageOverrides[room.name];
-                                    const roomImage = roomImageOverride?.src || room.image || roomFallbackImages[index % roomFallbackImages.length];
+                                    const roomImage = room.image_url || room.image || roomImageOverride?.src || roomFallbackImages[index % roomFallbackImages.length];
 
                                     return (
                                         <article key={room.id} className="min-w-0">
@@ -302,7 +303,7 @@ export default function AbuyogHotelPage({
                                                 {isAvailable ? (
                                                     <Link
                                                         href={bookingHref}
-                                                        className="inline-flex min-h-11 shrink-0 items-center justify-center bg-[#173c34] px-6 text-sm font-semibold text-white transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d99d4b]"
+                                                        className="inline-flex min-h-11 shrink-0 items-center justify-center bg-[#f8f3e8] px-6 text-sm font-semibold text-white transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d99d4b]"
                                                     >
                                                         Book now
                                                     </Link>

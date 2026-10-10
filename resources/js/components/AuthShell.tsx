@@ -8,6 +8,7 @@ type AuthShellProps = {
     title: string;
     description: string;
     children: ReactNode;
+    visualBackground?: string;
 };
 
 export default function AuthShell({
@@ -15,6 +16,7 @@ export default function AuthShell({
     title,
     description,
     children,
+    visualBackground,
 }: AuthShellProps) {
     return (
         <>
@@ -24,6 +26,20 @@ export default function AuthShell({
                     className="auth-visual"
                     aria-label="Abuyog coastal scenery"
                 >
+                    {visualBackground && (
+                        <>
+                            <img
+                                alt=""
+                                aria-hidden="true"
+                                className="auth-visual__image"
+                                src={visualBackground}
+                            />
+                            <div
+                                aria-hidden="true"
+                                className="auth-visual__image-overlay"
+                            />
+                        </>
+                    )}
                     <div className="auth-visual__topline">
                         <Link href={home()} className="brand brand--light">
                             <span className="brand__mark" aria-hidden="true">

@@ -122,7 +122,7 @@ export default function ResortsIndex({ resorts }: { resorts: Resort[] }) {
                                     <div className="mt-5 flex gap-3">
                                         <Link
                                             href={`/resorts/${resort.id}`}
-                                            className="rounded-none bg-[#173c34] bg-black px-4 py-2 text-xs font-semibold text-white"
+                                            className="rounded-none bg-[#d99d4b] bg-gold px-4 py-2 text-xs font-semibold text-white"
                                         >
                                             View Details
                                         </Link>

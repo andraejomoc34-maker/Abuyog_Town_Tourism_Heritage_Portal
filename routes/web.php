@@ -102,7 +102,16 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
     Route::get('/register', [AuthController::class, 'createRegistration'])->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.store');
-    Route::get('/auth/facebook', [AuthController::class, 'redirectToFacebook'])->name('auth.facebook.redirect');
+    Route::post('/register/face-session', [AuthController::class, 'createFaceLivenessSession'])
+        ->middleware('throttle:5,1')
+        ->name('register.face-session');
+    Route::post('/register/face-verification', [AuthController::class, 'completeFaceVerification'])
+        ->middleware('throttle:5,1')
+        ->name('register.face-verification');
+    Route::post('/register/face-cancel', [AuthController::class, 'cancelFaceLivenessSession'])
+        ->middleware('throttle:10,1')
+        ->name('register.face-cancel');
+    Route::get('/auth/facebook/redirect', [AuthController::class, 'redirectToFacebook'])->name('auth.facebook.redirect');
     Route::get('/auth/facebook/callback', [AuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 });
 
