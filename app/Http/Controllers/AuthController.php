@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\DuplicateFaceIdentityException;
 use App\Models\Booking;
 use App\Models\Inquiry;
 use App\Models\Resort;
 use App\Models\User;
-use App\Services\FaceLivenessService;
+use App\Services\FaceIdentityService;
+use App\Services\FaceVerificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -18,62 +20,62 @@ use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\FacebookProvider;
 use Laravel\Socialite\Two\InvalidStateException;
+use Throwable;
 
 class AuthController extends Controller
 {
-    private const FACE_LIVENESS_UNAVAILABLE = 'Face verification is currently unavailable. Please try again later.';
-
     public function createLogin(): Response
     {
-        return Inertia::render('auth/login');
+        return Inertia::render('auth/login', [
+            'status' => session('status'),
+        ]);
     }
 
     public function login(Request $request): RedirectResponse
     {
-        $credentials = $request->validate([
+        $rules = [
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
             'remember' => ['boolean'],
-        ]);
+        ];
+
+        $credentials = $request->validate($rules);
 
         $remember = $credentials['remember'] ?? false;
         unset($credentials['remember']);
 
-        if (! Auth::attempt($credentials, $remember)) {
+        $user = User::query()->whereRaw('LOWER(email) = ?', [strtolower((string) $credentials['email'])])->first();
+
+        if (! $user || ! Hash::check((string) $credentials['password'], (string) $user->password)) {
             return back()->withErrors([
                 'email' => 'Those credentials do not match our records.',
             ])->onlyInput('email');
         }
 
-        $request->session()->regenerate();
-
-        $user = Auth::user();
-
-        if ($user instanceof User && ! $user->is_active) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
+        if (! $user->is_active) {
             return back()->withErrors([
                 'email' => 'This account has been disabled.',
             ])->onlyInput('email');
         }
 
+        Auth::login($user, $remember);
+        $request->session()->regenerate();
+
         $intendedUrl = $request->session()->pull('intended_url');
 
-        if ($user && $user->role === 'hotel_admin') {
+        if ($user->role === 'hotel_admin') {
             return redirect()->to($intendedUrl ?: route('hotel-admin.dashboard'));
         }
 
-        if ($user && $user->role === 'resort_admin') {
+        if ($user->role === 'resort_admin') {
             return redirect()->to($intendedUrl ?: route('admin.resort.dashboard'));
         }
 
-        if ($user && $user->role === 'super_admin') {
+        if ($user->role === 'super_admin') {
             return redirect()->to($intendedUrl ?: route('super-admin.dashboard'));
         }
 
-        if ($user && $user->role === 'municipality_admin') {
+        if ($user->role === 'municipality_admin') {
             return redirect()->to($intendedUrl ?: route('municipality-admin.dashboard'));
         }
 
@@ -120,7 +122,7 @@ class AuthController extends Controller
                 $request,
                 'Facebook sign-in expired or could not be verified. Please try again.',
             );
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return $this->facebookLoginError(
                 $request,
                 'Facebook could not complete sign-in. Please try again or use email and password.',
@@ -233,22 +235,13 @@ class AuthController extends Controller
         return redirect()->route($this->resolveDashboardRouteFor($user))->with('success', 'Your account is ready.');
     }
 
-    public function createRegistration(Request $request, FaceLivenessService $faceLiveness): Response
+    public function createRegistration(Request $request, FaceVerificationService $faceProcessing): Response
     {
-        $verification = $request->session()->get('registration.face_liveness');
-        $verifiedAt = is_array($verification) ? ($verification['verified_at'] ?? null) : null;
-
         return Inertia::render('auth/register', [
-            'faceLiveness' => [
-                'configured' => $faceLiveness->hasBrowserConfiguration(),
-                'challengeToken' => is_array($verification) ? ($verification['challenge_token'] ?? null) : null,
-                'confidenceThreshold' => (float) config('services.face_liveness.confidence_threshold', 80),
-                'region' => config('services.face_liveness.region'),
-                'identityPoolId' => config('services.face_liveness.identity_pool_id'),
-                'sessionId' => is_array($verification) ? ($verification['session_id'] ?? null) : null,
-                'verified' => is_numeric($verifiedAt)
-                    && now()->timestamp - (int) $verifiedAt <= 175
-                    && now()->timestamp >= (int) $verifiedAt,
+            'faceProcessing' => [
+                'available' => $faceProcessing->isConfigured(),
+                'model' => config('services.face_service.model', 'Facenet'),
+                'warning' => 'We process a camera capture to confirm one usable face and securely store an encrypted face template to help prevent duplicate registrations. This does not prove your identity or detect presentation attacks.',
             ],
             'pendingFacebookSignup' => $request->session()->get('pending_facebook_signup') ? [
                 'name' => $request->session()->get('pending_facebook_signup.name'),
@@ -257,132 +250,24 @@ class AuthController extends Controller
         ]);
     }
 
-    public function createFaceLivenessSession(Request $request, FaceLivenessService $faceLiveness): RedirectResponse
-    {
-        if (! $faceLiveness->hasBrowserConfiguration()) {
-            return back()->withErrors([
-                'face_verification' => self::FACE_LIVENESS_UNAVAILABLE,
-            ]);
-        }
-
-        try {
-            $sessionId = $faceLiveness->createSession();
-            $challengeToken = $faceLiveness->createChallengeToken();
-            $faceLiveness->storeSessionChallenge($sessionId, $challengeToken);
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            return back()->withErrors([
-                'face_verification' => self::FACE_LIVENESS_UNAVAILABLE,
-            ]);
-        }
-
-        $request->session()->put('registration.face_liveness', [
-            'session_id' => $sessionId,
-            'challenge_token' => $challengeToken,
-            'expires_at' => now()->addSeconds(175)->timestamp,
-            'verified_at' => null,
-        ]);
-
-        return redirect()->route('register');
-    }
-
-    public function completeFaceVerification(Request $request, FaceLivenessService $faceLiveness): RedirectResponse
-    {
-        $verification = $request->session()->get('registration.face_liveness');
-
-        if (! is_array($verification)
-            || ! is_string($verification['session_id'] ?? null)
-            || ! is_numeric($verification['expires_at'] ?? null)
-            || now()->timestamp > (int) $verification['expires_at']) {
-            $request->session()->forget('registration.face_liveness');
-
-            return back()->withErrors([
-                'face_verification' => 'Verification expired. Please try again.',
-            ]);
-        }
-
-        $localBrowserVerification = (bool) config('services.face_liveness.local_browser', true);
-        $validated = $request->validate([
-            'challenge_token' => [$localBrowserVerification ? 'required_with:capture' : 'nullable', 'string', 'max:128'],
-            'capture' => [$localBrowserVerification ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'face_confidence' => [$localBrowserVerification ? 'required_with:capture' : 'nullable', 'numeric', 'min:0.5', 'max:1'],
-            'face_count' => [$localBrowserVerification ? 'required_with:capture' : 'nullable', 'integer', 'in:1'],
-        ]);
-
-        if (isset($validated['capture'])) {
-            try {
-                $results = $faceLiveness->recordLocalVerification(
-                    $verification['session_id'],
-                    $validated['challenge_token'],
-                    $validated['capture'],
-                    (float) $validated['face_confidence'],
-                    (int) $validated['face_count'],
-                );
-            } catch (\RuntimeException) {
-                return back()->withErrors([
-                    'face_verification' => 'Verification failed. Please try again.',
-                ]);
-            } catch (\Throwable $exception) {
-                report($exception);
-
-                return back()->withErrors([
-                    'face_verification' => self::FACE_LIVENESS_UNAVAILABLE,
-                ]);
-            }
-        } else {
-            try {
-                $results = $faceLiveness->getSessionResults($verification['session_id']);
-            } catch (\Throwable $exception) {
-                report($exception);
-
-                return back()->withErrors([
-                    'face_verification' => self::FACE_LIVENESS_UNAVAILABLE,
-                ]);
-            }
-        }
-
-        if ($results['status'] !== 'SUCCEEDED'
-            || $results['confidence'] === null
-            || $results['confidence'] < (float) config('services.face_liveness.confidence_threshold', 80)
-            || $results['face_count'] !== 1) {
-            $request->session()->forget('registration.face_liveness');
-
-            return back()->withErrors([
-                'face_verification' => 'Verification failed. Please try again.',
-            ]);
-        }
-
-        $request->session()->put('registration.face_liveness.verified_at', now()->timestamp);
-
-        return redirect()->route('register');
-    }
-
-    public function cancelFaceLivenessSession(Request $request): RedirectResponse
-    {
-        $request->session()->forget('registration.face_liveness');
-
-        return redirect()->route('register');
-    }
-
-    public function register(Request $request): RedirectResponse
-    {
-        if (! $this->hasCurrentFaceVerification($request)) {
-            return back()->withErrors([
-                'face_verification' => 'Complete face verification before creating your account.',
-            ]);
-        }
-
+    public function register(
+        Request $request,
+        FaceIdentityService $faceIdentity,
+    ): RedirectResponse {
         $pendingFacebookSignup = $request->session()->get('pending_facebook_signup');
         $isFacebookSignup = is_array($pendingFacebookSignup);
 
-        $validated = $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'contact_number' => [$isFacebookSignup ? 'required' : 'nullable', 'string', 'max:30'],
             'password' => [$isFacebookSignup ? 'nullable' : 'required', 'confirmed', 'string', 'min:8'],
             'terms' => ['accepted'],
-        ]);
+            'face_biometric_consent' => ['accepted'],
+            'face_image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ];
+
+        $validated = $request->validate($rules);
 
         $pendingFacebookEmail = is_array($pendingFacebookSignup)
             ? ($pendingFacebookSignup['email'] ?? null)
@@ -403,34 +288,53 @@ class AuthController extends Controller
             ]);
         }
 
-        $verification = $request->session()->get('registration.face_liveness');
-        $sessionId = is_array($verification) ? ($verification['session_id'] ?? null) : null;
+        $imageBytes = null;
 
-        if (! is_string($sessionId)
-            || ! Cache::add(
-                'registration.face-liveness.consumed.'.hash('sha256', $sessionId),
-                true,
-                now()->addSeconds(175),
-            )) {
+        $faceImage = $request->file('face_image');
+
+        if (! $faceImage instanceof UploadedFile || ! $faceImage->isValid()) {
             return back()->withErrors([
-                'face_verification' => 'This verification was already used. Please verify again.',
+                'face_image' => 'Please capture a clear face image before continuing.',
             ]);
         }
 
-        $user = User::create([
-            'name' => $isFacebookSignup ? $pendingFacebookSignup['name'] : $validated['name'],
-            'email' => $isFacebookSignup && filled($pendingFacebookEmail)
-                ? $pendingFacebookEmail
-                : $validated['email'],
-            'contact_number' => $validated['contact_number'] ?? null,
-            'password' => Hash::make($isFacebookSignup
-                ? bin2hex(random_bytes(16))
-                : $validated['password']),
-            'role' => 'user',
-            'facebook_id' => $isFacebookSignup ? $pendingFacebookSignup['facebook_id'] : null,
-        ]);
+        $imageBytes = $this->readUploadedImageBytes($faceImage);
 
-        $request->session()->forget(['registration.face_liveness', 'pending_facebook_signup']);
+        if (! is_string($imageBytes) || $imageBytes === '') {
+            return back()->withErrors([
+                'face_image' => 'The uploaded face image could not be read. Please try again.',
+            ]);
+        }
+
+        try {
+            $user = $faceIdentity->createUserWithEnrollment(
+                $imageBytes,
+                fn (): User => User::create([
+                    'name' => $isFacebookSignup ? $pendingFacebookSignup['name'] : $validated['name'],
+                    'email' => $isFacebookSignup && filled($pendingFacebookEmail)
+                        ? $pendingFacebookEmail
+                        : $validated['email'],
+                    'contact_number' => $validated['contact_number'] ?? null,
+                    'password' => Hash::make($isFacebookSignup
+                        ? bin2hex(random_bytes(16))
+                        : $validated['password']),
+                    'role' => 'user',
+                    'facebook_id' => $isFacebookSignup ? $pendingFacebookSignup['facebook_id'] : null,
+                ]),
+            );
+        } catch (DuplicateFaceIdentityException) {
+            return back()->withErrors([
+                'face_verification' => 'This face is already enrolled. Please use your existing account or contact support.',
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors([
+                'face_verification' => 'Face processing is temporarily unavailable or could not use this image. Please try again.',
+            ]);
+        }
+
+        $request->session()->forget('pending_facebook_signup');
         Auth::login($user);
         $request->session()->regenerate();
 
@@ -441,14 +345,37 @@ class AuthController extends Controller
         return redirect()->route('dashboard');
     }
 
-    private function hasCurrentFaceVerification(Request $request): bool
+    private function readUploadedImageBytes(UploadedFile $file): ?string
     {
-        $verification = $request->session()->get('registration.face_liveness');
-        $verifiedAt = is_array($verification) ? ($verification['verified_at'] ?? null) : null;
+        $candidatePaths = [
+            $file->getRealPath(),
+            $file->getPathname(),
+            $file->path(),
+        ];
 
-        return is_numeric($verifiedAt)
-            && now()->timestamp - (int) $verifiedAt <= 175
-            && now()->timestamp >= (int) $verifiedAt;
+        foreach ($candidatePaths as $path) {
+            if (! is_string($path) || $path === '' || ! is_file($path)) {
+                continue;
+            }
+
+            $contents = @file_get_contents($path);
+
+            if (is_string($contents) && $contents !== '') {
+                return $contents;
+            }
+        }
+
+        try {
+            $contents = $file->getContent();
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! is_string($contents) || $contents === '') {
+            return null;
+        }
+
+        return $contents;
     }
 
     public function dashboard(Request $request): Response|RedirectResponse
@@ -497,9 +424,15 @@ class AuthController extends Controller
         ]);
     }
 
-    public function profile(): Response
+    public function profile(Request $request): Response
     {
-        return Inertia::render('profile');
+        $user = $request->user();
+
+        return Inertia::render('profile', [
+            'faceEnrollment' => [
+                'enrolled' => $user instanceof User && $user->role === 'user' && $user->faceIdentity()->exists(),
+            ],
+        ]);
     }
 
     public function updateProfile(Request $request): RedirectResponse
@@ -522,10 +455,40 @@ class AuthController extends Controller
         unset($validated['profile_photo']);
 
         if ($profilePhoto) {
-            $user->profile_photo_path = $profilePhoto->store('profile-photos', 'public');
+            try {
+                $newPhotoPath = Storage::disk('public')->putFile('profile-photos', $profilePhoto);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return back()->withErrors([
+                    'profile_photo' => 'The profile photo could not be saved. Please try again.',
+                ]);
+            }
+
+            if (! is_string($newPhotoPath)) {
+                report(new \RuntimeException('The public disk did not store the profile photo.'));
+
+                return back()->withErrors([
+                    'profile_photo' => 'The profile photo could not be saved. Please try again.',
+                ]);
+            }
+
+            $user->profile_photo_path = $newPhotoPath;
         }
 
-        $user->fill($validated)->save();
+        try {
+            $user->fill($validated)->save();
+        } catch (Throwable $exception) {
+            if ($profilePhoto && is_string($newPhotoPath ?? null)) {
+                Storage::disk('public')->delete($newPhotoPath);
+            }
+
+            report($exception);
+
+            return back()->withErrors([
+                'profile_photo' => 'Your profile could not be updated. Please try again.',
+            ]);
+        }
 
         if ($profilePhoto && $previousPhotoPath) {
             Storage::disk('public')->delete($previousPhotoPath);

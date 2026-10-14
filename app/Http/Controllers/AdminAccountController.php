@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Resort;
 use App\Models\User;
+use App\Services\ResortAdminNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -36,16 +37,26 @@ class AdminAccountController extends Controller
         return $this->form();
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ResortAdminNotifier $notifier): RedirectResponse
     {
-        $this->authorizeSuperAdmin($request);
+        $actor = $this->authorizeSuperAdmin($request);
         $validated = $request->validate($this->rules());
         $validated['resort_id'] = $validated['role'] === 'resort_admin'
             ? $validated['resort_id']
             : null;
         $validated['is_active'] = true;
 
-        User::create($validated);
+        $account = User::create($validated);
+
+        $notifier->notifySuperAdmins(
+            'Administrator account created',
+            $account->role === 'resort_admin'
+                ? 'A resort administrator account was created.'
+                : 'A municipality administrator account was created.',
+            '/super-admin/accounts',
+            'admin_account',
+            $actor->id,
+        );
 
         return redirect()->route('super-admin.accounts.index')->with('success', 'Admin account created.');
     }

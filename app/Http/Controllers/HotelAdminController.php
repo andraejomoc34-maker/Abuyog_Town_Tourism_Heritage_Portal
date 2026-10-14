@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\HotelRoom;
 use App\Models\Resort;
 use App\Models\User;
+use App\Services\ResortAdminNotifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,17 +43,35 @@ class HotelAdminController extends Controller
         return $this->render($request, 'bookings', $selectedBooking);
     }
 
-    public function updateBookingStatus(Request $request, int $booking): RedirectResponse
-    {
+    public function updateBookingStatus(
+        Request $request,
+        int $booking,
+        ResortAdminNotifier $notifier,
+    ): RedirectResponse {
         $hotel = $this->hotelFor($request);
         $selectedBooking = Booking::query()->findOrFail($booking);
         abort_unless((int) $selectedBooking->resort_id === (int) $hotel->id, 403);
+        $previousStatus = $selectedBooking->status;
 
         $validated = $request->validate([
             'status' => ['required', Rule::in(['Confirmed', 'Rejected', 'Cancelled', 'Completed'])],
         ]);
 
         $selectedBooking->update(['status' => $validated['status']]);
+
+        if ($previousStatus !== $validated['status']) {
+            $selectedBooking->loadMissing('user');
+
+            if ($selectedBooking->user instanceof User) {
+                $notifier->notifyUser(
+                    $selectedBooking->user,
+                    'Booking status updated',
+                    'Your hotel booking is now '.$validated['status'].'.',
+                    '/my-bookings/'.$selectedBooking->id,
+                    'booking',
+                );
+            }
+        }
 
         return back()->with('success', 'Hotel booking status updated.');
     }

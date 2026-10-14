@@ -8,6 +8,7 @@ const experiences = [
         location: 'Abuyog, Leyte',
         description:
             'A celebration named in Abuyog’s cultural calendar. Event dates and program details are to be announced through official local channels.',
+        href: '/discover/buyogan-festival',
         image: '/abuyog-5.jpg',
         alt: 'Festival-themed destination image from the existing tourism collection',
     },
@@ -17,6 +18,7 @@ const experiences = [
         location: 'Abuyog, Leyte',
         description:
             'Learn about traditions and cultural activities through stories shared by local communities.',
+        href: '/#culture',
         image: '/abuyog-5.jpg',
         alt: 'Abuyog community image from the existing tourism collection',
     },
@@ -26,6 +28,7 @@ const experiences = [
         location: 'Abuyog, Leyte',
         description:
             'Discover local flavors and food traditions. Featured dishes can be added as verified details become available.',
+        href: '/#culture',
         image: '/abuyog-4.jpg',
         alt: 'Local destination image from the existing tourism collection',
     },
@@ -35,6 +38,7 @@ const experiences = [
         location: 'Abuyog, Leyte',
         description:
             'Find cultural performances, local arts, and creative activities shared by the community.',
+        href: '/#culture',
         image: '/Abuyog-7.jpg',
         alt: 'Cultural destination image from the existing tourism collection',
     },
@@ -163,7 +167,7 @@ export default function Culture() {
                                     </p>
                                     <Link
                                         className="mt-5 inline-flex items-center text-xs font-bold tracking-[0.12em] text-[#9b6a28] transition hover:text-[#173c34]"
-                                        href="/#culture"
+                                        href={experience.href}
                                     >
                                         VIEW DETAILS{' '}
                                         <span className="ml-2 text-base">

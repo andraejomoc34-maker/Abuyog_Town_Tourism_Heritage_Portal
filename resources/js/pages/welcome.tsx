@@ -416,7 +416,7 @@ export default function Welcome() {
                                     </Link>
                                     <Link
                                         href="/register"
-                                        className="rounded-none bg-white px-5 py-2.5 text-[#173c34] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#f6e5bd]"
+                                        className="rounded-none bg-[#d99d4b] px-5 py-2.5 text-[#173c34] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#f6e5bd]"
                                     >
                                         Sign up
                                     </Link>
@@ -734,7 +734,12 @@ export default function Welcome() {
                     id="festival"
                     className="relative overflow-hidden px-6 py-24 lg:px-10"
                 >
-                    <div className="absolute inset-0 bg-[url('https://old.dailyguardian.com.ph/wp-content/uploads/2023/01/Pintados_-_Kasadyaan_Festival.jpg')] bg-cover bg-center" />
+                    <img
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 h-full w-full object-cover object-center"
+                        src="/images/festivals/buyogan/buyogan-performers.jpg"
+                    />
                     <div className="absolute inset-0 bg-[#0c352e]/75" />
                     <div className="relative mx-auto max-w-4xl text-center text-white">
                         <p className="text-xs font-bold tracking-[0.25em] text-[#f0c978]">
@@ -751,13 +756,13 @@ export default function Welcome() {
                             Discover the traditions, performances, celebrations,
                             and cultural identity of Abuyog.
                         </p>
-                        <a
-                            href="#culture"
-                            className="mt-9 inline-flex rounded-none bg-black px-7 py-3.5 text-sm font-semibold text-[#173c34] transition hover:-translate-y-1 hover:bg-[#f6e5bd]"
+                        <Link
+                            href="/discover/buyogan-festival"
+                            className="mt-9 inline-flex rounded-none bg-[#f0c978] px-7 py-3.5 text-sm font-semibold text-[#173c34] transition hover:-translate-y-1 hover:bg-white"
                         >
                             View Festival{' '}
                             <span className="ml-2">{'\u2197'}</span>
-                        </a>
+                        </Link>
                     </div>
                 </section>
 
@@ -861,7 +866,7 @@ export default function Welcome() {
                         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                             <Link
                                 href="/discover"
-                                className="inline-flex rounded-none bg-[#123d36] px-7 py-4 text-sm font-semibold text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:bg-[#1b574b] hover:shadow-[0_18px_30px_rgba(23,60,52,0.18)]"
+                                className="inline-flex rounded-none bg-[#d99d4b] px-7 py-4 text-sm font-semibold text-white shadow-lg transition duration-300 hover:-translate-y-1 hover:bg-[#1b574b] hover:shadow-[0_18px_30px_rgba(23,60,52,0.18)]"
                             >
                                 EXPLORE ABUYOG {'\u2192'}
                             </Link>

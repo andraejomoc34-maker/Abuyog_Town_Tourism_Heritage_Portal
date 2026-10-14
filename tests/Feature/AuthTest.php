@@ -1,445 +1,163 @@
 <?php
 
 use App\Models\User;
-use App\Services\FaceLivenessService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
-uses(RefreshDatabase::class);
+function validFaceUploadForTests(): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent(
+        'face.jpg',
+        base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=', true),
+    );
+}
 
 test('guests can view the login and registration pages', function () {
-    $this->get(route('login'))->assertOk();
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('auth/login')
+            ->missing('faceVerification')
+            ->missing('faceProcessing'));
     $this->get(route('register'))->assertOk();
 });
 
-test('a visitor can register and is signed in', function () {
-    $response = $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => now()->timestamp,
-            ],
-        ],
-    ])->post(route('register.store'), [
+test('registration requires explicit consent and a captured face image when local verification is enabled', function () {
+    config([
+        'services.face_service.enabled' => true,
+        'services.face_service.url' => 'http://127.0.0.1:8001',
+        'services.face_service.token' => 'local-test-token',
+    ]);
+
+    $this->post(route('register.store'), [
+        'name' => 'Local User',
+        'email' => 'local.user@example.com',
+        'contact_number' => '09171234567',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'terms' => true,
+    ])->assertSessionHasErrors(['face_biometric_consent', 'face_image']);
+
+    $this->assertDatabaseMissing('users', ['email' => 'local.user@example.com']);
+});
+
+test('a visitor can register after local face processing and is signed in', function () {
+    config([
+        'services.face_service.enabled' => true,
+        'services.face_service.url' => 'http://127.0.0.1:8001',
+        'services.face_service.token' => 'local-test-token',
+    ]);
+
+    Http::fake([
+        'http://127.0.0.1:8001/enroll' => Http::response([
+            'face_detected' => true,
+            'model' => 'Facenet',
+            'embedding' => array_fill(0, 128, 0.1),
+        ], 200),
+    ]);
+
+    $response = $this->post(route('register.store'), [
         'name' => 'Andrae Dela Cruz',
         'email' => 'andrae@example.com',
         'contact_number' => '09171234567',
         'password' => 'password',
         'password_confirmation' => 'password',
         'terms' => true,
+        'face_biometric_consent' => true,
+        'face_image' => validFaceUploadForTests(),
     ]);
 
     $response->assertRedirect(route('dashboard'));
     $this->assertAuthenticated();
     $this->assertDatabaseHas('users', ['email' => 'andrae@example.com']);
-
-    $registeredUser = User::where('email', 'andrae@example.com')->firstOrFail();
-    expect(Hash::check('password', $registeredUser->password))->toBeTrue();
+    $this->assertDatabaseHas('user_face_identities', [
+        'user_id' => User::query()->where('email', 'andrae@example.com')->value('id'),
+    ]);
 });
 
-test('registration cannot be bypassed with a client-supplied verification flag', function () {
-    $this->post(route('register.store'), [
-        'name' => 'Unverified Visitor',
-        'email' => 'unverified@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-        'face_verified' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'unverified@example.com']);
-    $this->assertGuest();
-});
-
-test('local browser verification requires and validates a captured image without AWS configuration', function () {
+test('registration allows a face that does not match a legacy enrollment', function () {
     config([
-        'services.face_liveness.region' => null,
-        'services.face_liveness.identity_pool_id' => null,
+        'services.face_service.enabled' => true,
+        'services.face_service.url' => 'http://127.0.0.1:8001',
+        'services.face_service.token' => 'local-test-token',
     ]);
 
-    $sessionId = 'browser-local-session';
-    $challengeToken = 'browser-local-token';
-    app(FaceLivenessService::class)->storeSessionChallenge($sessionId, $challengeToken);
-    $imageContents = base64_decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
-        true,
-    );
-    $capture = UploadedFile::fake()->createWithContent('face-capture.png', $imageContents);
-    expect(Cache::get('registration.face-liveness.challenge.'.hash('sha256', $sessionId)))
-        ->toBe(['challenge_token' => $challengeToken]);
-    expect($capture->isValid())->toBeTrue();
-    expect(getimagesize($capture->getRealPath()))->not->toBeFalse();
-
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => $sessionId,
-                'challenge_token' => $challengeToken,
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'), [
-        'challenge_token' => $challengeToken,
-        'capture' => $capture,
-        'face_confidence' => 0.92,
-        'face_count' => 1,
-    ])->assertRedirect(route('register'));
-
-    expect(session('registration.face_liveness.verified_at'))->toBeNumeric();
-
-    $this->post(route('register.store'), [
-        'name' => 'Local Browser User',
-        'email' => 'browser-local@example.com',
-        'contact_number' => '09171234567',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertRedirect(route('dashboard'));
-
-    $this->assertDatabaseHas('users', ['email' => 'browser-local@example.com']);
-});
-
-test('a browser verification flag without a captured image cannot authorize registration', function () {
-    $sessionId = 'browser-missing-capture-session';
-    $challengeToken = 'browser-missing-capture-token';
-    app(FaceLivenessService::class)->storeSessionChallenge($sessionId, $challengeToken);
-
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => $sessionId,
-                'challenge_token' => $challengeToken,
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'), [
-        'challenge_token' => $challengeToken,
-        'verified' => true,
-    ])->assertSessionHasErrors('capture');
-
-    expect(session('registration.face_liveness.verified_at'))->toBeNull();
-    $this->assertDatabaseCount('users', 0);
-});
-
-test('local browser verification rejects unsupported capture formats', function () {
-    $sessionId = 'browser-invalid-capture-session';
-    $challengeToken = 'browser-invalid-capture-token';
-    app(FaceLivenessService::class)->storeSessionChallenge($sessionId, $challengeToken);
-
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => $sessionId,
-                'challenge_token' => $challengeToken,
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'), [
-        'challenge_token' => $challengeToken,
-        'capture' => UploadedFile::fake()->create('capture.gif', 100, 'image/gif'),
-        'face_confidence' => 0.95,
-        'face_count' => 1,
-    ])->assertSessionHasErrors('capture');
-
-    expect(session('registration.face_liveness.verified_at'))->toBeNull();
-    $this->assertDatabaseCount('users', 0);
-});
-
-test('a local capture below the configured confidence threshold cannot verify registration', function () {
-    config(['services.face_liveness.confidence_threshold' => 80]);
-    $sessionId = 'browser-low-confidence-session';
-    $challengeToken = 'browser-low-confidence-token';
-    app(FaceLivenessService::class)->storeSessionChallenge($sessionId, $challengeToken);
-    $imageContents = base64_decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
-        true,
-    );
-
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => $sessionId,
-                'challenge_token' => $challengeToken,
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'), [
-        'challenge_token' => $challengeToken,
-        'capture' => UploadedFile::fake()->createWithContent('low-confidence-capture.png', $imageContents),
-        'face_confidence' => 0.79,
-        'face_count' => 1,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseCount('users', 0);
-});
-
-test('a browser challenge can start without AWS configuration', function () {
-    config([
-        'services.face_liveness.region' => null,
-        'services.face_liveness.identity_pool_id' => null,
+    $existingUser = User::factory()->create();
+    $existingUser->faceIdentity()->create([
+        'face_id' => 'existing-face',
+        'face_id_hash' => hash('sha256', 'existing-face'),
+        'external_image_id' => 'existing-ext',
+        'external_image_id_hash' => hash('sha256', 'existing-ext'),
+        'reference_image' => 'stored-enrolled-image',
+        'consented_at' => now(),
     ]);
 
-    $this->post(route('register.face-session'))
-        ->assertRedirect(route('register'));
-
-    $this->assertDatabaseCount('users', 0);
-});
-
-test('face verification redirects remain https behind a local tunnel proxy', function () {
-    $response = $this->withServerVariables([
-        'REMOTE_ADDR' => '127.0.0.1',
-        'HTTP_HOST' => 'verification-tunnel.example.test',
-        'HTTP_X_FORWARDED_PROTO' => 'https',
-    ])->post(route('register.face-session'));
-
-    expect(parse_url($response->headers->get('Location'), PHP_URL_SCHEME))->toBe('https');
-    expect(parse_url($response->headers->get('Location'), PHP_URL_PATH))->toBe('/register');
-});
-
-test('AWS session creation errors are hidden and registration remains blocked', function () {
-    $faceLiveness = Mockery::mock(FaceLivenessService::class);
-    $faceLiveness->shouldReceive('hasBrowserConfiguration')->once()->andReturn(true);
-    $faceLiveness->shouldReceive('createSession')->once()->andThrow(new RuntimeException('private AWS credential detail'));
-    $this->instance(FaceLivenessService::class, $faceLiveness);
-
-    $this->post(route('register.face-session'))
-        ->assertSessionHasErrors([
-            'face_verification' => 'Face verification is currently unavailable. Please try again later.',
-        ])
-        ->assertDontSee('private AWS credential detail');
-
-    $this->post(route('register.store'), [
-        'name' => 'Unverified Visitor',
-        'email' => 'aws-error@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'aws-error@example.com']);
-});
-
-test('AWS result errors are hidden and verification remains unapproved', function () {
-    config(['services.face_liveness.local_browser' => false]);
-    $faceLiveness = Mockery::mock(FaceLivenessService::class);
-    $faceLiveness->shouldReceive('getSessionResults')
-        ->once()
-        ->andThrow(new RuntimeException('private AWS result detail'));
-    $this->instance(FaceLivenessService::class, $faceLiveness);
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'))
-        ->assertSessionHasErrors([
-            'face_verification' => 'Face verification is currently unavailable. Please try again later.',
-        ])
-        ->assertDontSee('private AWS result detail');
-
-    $this->post(route('register.store'), [
-        'name' => 'AWS Result Error',
-        'email' => 'aws-result-error@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'aws-result-error@example.com']);
-});
-
-test('a successful server-verified liveness result permits registration', function () {
-    config([
-        'services.face_liveness.confidence_threshold' => 80,
-        'services.face_liveness.local_browser' => false,
+    Http::fake([
+        'http://127.0.0.1:8001/enroll' => Http::response([
+            'face_detected' => true,
+            'model' => 'Facenet',
+            'embedding' => array_fill(0, 128, 0.1),
+        ], 200),
+        'http://127.0.0.1:8001/verify' => Http::response([
+            'match' => false,
+            'comparison_succeeded' => true,
+            'face_detected' => [true, true],
+        ], 200),
     ]);
-    $faceLiveness = Mockery::mock(FaceLivenessService::class);
-    $faceLiveness->shouldReceive('getSessionResults')
-        ->once()
-        ->with('11111111-1111-4111-8111-111111111111')
-        ->andReturn(['status' => 'SUCCEEDED', 'confidence' => 91.5, 'face_count' => 1]);
-    $this->instance(FaceLivenessService::class, $faceLiveness);
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'))->assertRedirect(route('register'));
 
     $this->post(route('register.store'), [
-        'name' => 'Verified Visitor',
-        'email' => 'verified@example.com',
+        'name' => 'Distinct Face User',
+        'email' => 'distinct.face@example.com',
         'contact_number' => '09171234567',
         'password' => 'password',
         'password_confirmation' => 'password',
         'terms' => true,
+        'face_biometric_consent' => true,
+        'face_image' => validFaceUploadForTests(),
     ])->assertRedirect(route('dashboard'));
 
-    $this->assertDatabaseHas('users', ['email' => 'verified@example.com']);
-    $this->assertAuthenticated();
+    $this->assertDatabaseHas('users', ['email' => 'distinct.face@example.com']);
 });
 
-test('liveness with multiple detected faces cannot authorize registration', function () {
-    config(['services.face_liveness.local_browser' => false]);
-    $faceLiveness = Mockery::mock(FaceLivenessService::class);
-    $faceLiveness->shouldReceive('getSessionResults')
-        ->once()
-        ->andReturn(['status' => 'SUCCEEDED', 'confidence' => 99, 'face_count' => 2]);
-    $this->instance(FaceLivenessService::class, $faceLiveness);
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'))->assertSessionHasErrors('face_verification');
+test('login works with email and password without an enrolled face or face-service call', function () {
+    config([
+        'services.face_service.enabled' => true,
+        'services.face_service.url' => 'http://127.0.0.1:8001',
+        'services.face_service.token' => 'local-test-token',
+    ]);
 
-    $this->post(route('register.store'), [
-        'name' => 'Multiple Faces',
-        'email' => 'multiple@example.com',
+    $user = User::factory()->create([
+        'email' => 'login.face@example.com',
+        'password' => Hash::make('password'),
+    ]);
+
+    Http::fake();
+
+    $this->post(route('login.store'), [
+        'email' => 'login.face@example.com',
         'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'multiple@example.com']);
-});
-
-test('a failed liveness challenge cannot authorize registration', function () {
-    config(['services.face_liveness.local_browser' => false]);
-    $faceLiveness = Mockery::mock(FaceLivenessService::class);
-    $faceLiveness->shouldReceive('getSessionResults')
-        ->once()
-        ->andReturn(['status' => 'FAILED', 'confidence' => null, 'face_count' => 0]);
-    $this->instance(FaceLivenessService::class, $faceLiveness);
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'))->assertSessionHasErrors('face_verification');
-
-    $this->post(route('register.store'), [
-        'name' => 'Failed Liveness',
-        'email' => 'failed-liveness@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'failed-liveness@example.com']);
-});
-
-test('a previously consumed liveness session cannot authorize another registration', function () {
-    Cache::add(
-        'registration.face-liveness.consumed.'.hash('sha256', '11111111-1111-4111-8111-111111111111'),
-        true,
-        now()->addMinutes(3),
-    );
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => now()->timestamp,
-            ],
-        ],
-    ])->post(route('register.store'), [
-        'name' => 'Reused Verification',
-        'email' => 'reused@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'reused@example.com']);
-});
-
-test('an expired AWS liveness session cannot authorize verification or registration', function () {
-    $faceLiveness = Mockery::mock(FaceLivenessService::class);
-    $faceLiveness->shouldNotReceive('getSessionResults');
-    $this->instance(FaceLivenessService::class, $faceLiveness);
-    $this->withSession([
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '11111111-1111-4111-8111-111111111111',
-                'expires_at' => now()->subSecond()->timestamp,
-                'verified_at' => null,
-            ],
-        ],
-    ])->post(route('register.face-verification'))
-        ->assertSessionHasErrors('face_verification');
-
-    $this->post(route('register.store'), [
-        'name' => 'Expired Verification',
-        'email' => 'expired@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseMissing('users', ['email' => 'expired@example.com']);
-});
-
-test('a second registration request cannot reuse a successfully consumed verification', function () {
-    $verificationState = [
-        'registration' => [
-            'face_liveness' => [
-                'session_id' => '33333333-3333-4333-8333-333333333333',
-                'expires_at' => now()->addMinutes(2)->timestamp,
-                'verified_at' => now()->timestamp,
-            ],
-        ],
-    ];
-
-    $this->withSession($verificationState)->post(route('register.store'), [
-        'name' => 'First Registration',
-        'email' => 'first-use@example.com',
-        'contact_number' => '09171234567',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
     ])->assertRedirect(route('dashboard'));
 
-    $this->post(route('logout'))->assertRedirect(route('home'));
-
-    $this->withSession($verificationState)->post(route('register.store'), [
-        'name' => 'Second Registration',
-        'email' => 'second-use@example.com',
-        'contact_number' => '09171234567',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-        'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
-
-    $this->assertDatabaseHas('users', ['email' => 'first-use@example.com']);
-    $this->assertDatabaseMissing('users', ['email' => 'second-use@example.com']);
+    $this->assertAuthenticatedAs($user);
+    Http::assertNothingSent();
 });
 
-test('a registered visitor can sign in and sign out', function () {
+test('an existing user without biometric enrollment can sign in and sign out normally', function () {
+    config([
+        'services.face_service.enabled' => true,
+        'services.face_service.url' => 'http://127.0.0.1:8001',
+        'services.face_service.token' => 'local-test-token',
+    ]);
+
     $user = User::factory()->create([
         'email' => 'visitor@example.com',
         'password' => Hash::make('password'),
     ]);
+
+    Http::fake();
 
     $this->post(route('login.store'), [
         'email' => $user->email,
@@ -447,7 +165,7 @@ test('a registered visitor can sign in and sign out', function () {
     ])->assertRedirect(route('dashboard'));
 
     $this->assertAuthenticatedAs($user);
-
+    Http::assertNothingSent();
     $this->post(route('logout'))->assertRedirect(route('home'));
     $this->assertGuest();
 });
@@ -510,11 +228,73 @@ test('an authenticated user can upload and retain a profile photo', function () 
     $user->refresh();
     expect($user->profile_photo_path)->not->toBeNull();
     Storage::disk('public')->assertExists($user->profile_photo_path);
+    expect($user->avatar)->toBe('/storage/'.$user->profile_photo_path);
 
     $this->get(route('profile'))
         ->assertInertia(fn ($page) => $page
             ->component('profile')
-            ->where('auth.user.avatar', Storage::disk('public')->url($user->profile_photo_path)));
+            ->where('auth.user.avatar', '/storage/'.$user->profile_photo_path));
+});
+
+test('all account roles can upload a profile photo on the shared profile page', function (string $role) {
+    Storage::fake('public');
+    $user = User::factory()->create(['role' => $role]);
+    $imageContents = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
+        true,
+    );
+
+    $this->actingAs($user)
+        ->post(route('profile.update'), [
+            '_method' => 'patch',
+            'name' => $user->name,
+            'email' => $user->email,
+            'contact_number' => $user->contact_number,
+            'profile_photo' => UploadedFile::fake()->createWithContent('profile.png', $imageContents),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $user->refresh();
+    expect($user->profile_photo_path)->not->toBeNull()
+        ->and($user->avatar)->toBe('/storage/'.$user->profile_photo_path);
+    Storage::disk('public')->assertExists($user->profile_photo_path);
+})->with([
+    'customer' => 'user',
+    'resort administrator' => 'resort_admin',
+    'hotel administrator' => 'hotel_admin',
+    'municipality administrator' => 'municipality_admin',
+    'super administrator' => 'super_admin',
+]);
+
+test('a profile photo storage failure is shown without changing the saved profile', function () {
+    $user = User::factory()->create([
+        'name' => 'Original Name',
+        'profile_photo_path' => 'profile-photos/existing.jpg',
+    ]);
+    $disk = Mockery::mock(FilesystemAdapter::class);
+    $disk->shouldReceive('putFile')
+        ->once()
+        ->with('profile-photos', Mockery::type(UploadedFile::class))
+        ->andReturn(false);
+    Storage::shouldReceive('disk')->once()->with('public')->andReturn($disk);
+    $imageContents = base64_decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
+        true,
+    );
+
+    $this->actingAs($user)
+        ->post(route('profile.update'), [
+            '_method' => 'patch',
+            'name' => 'Changed Name',
+            'email' => $user->email,
+            'contact_number' => $user->contact_number,
+            'profile_photo' => UploadedFile::fake()->createWithContent('profile.png', $imageContents),
+        ])
+        ->assertSessionHasErrors('profile_photo');
+
+    expect($user->fresh()->name)->toBe('Original Name')
+        ->and($user->fresh()->profile_photo_path)->toBe('profile-photos/existing.jpg');
 });
 
 test('an authenticated user cannot upload an unsupported profile photo', function () {

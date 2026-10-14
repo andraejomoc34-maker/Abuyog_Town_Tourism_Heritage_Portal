@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     useEffect,
     useRef,
@@ -8,8 +8,16 @@ import {
 } from 'react';
 import AuthenticatedNavigation from '../components/AuthenticatedNavigation';
 
+type FaceEnrollmentPageProps = {
+    faceEnrollment: {
+        enrolled: boolean;
+    };
+};
+
 export default function Profile() {
     const { auth } = usePage().props;
+    const { faceEnrollment } = usePage()
+        .props as unknown as FaceEnrollmentPageProps;
     const user = auth.user;
     const form = useForm<{
         name: string;
@@ -24,6 +32,12 @@ export default function Profile() {
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+    const [faceEnrollmentError, setFaceEnrollmentError] = useState<
+        string | null
+    >(null);
+    const [faceEnrollmentMessage, setFaceEnrollmentMessage] = useState<
+        string | null
+    >(null);
 
     useEffect(() => {
         if (!form.data.profile_photo) {
@@ -77,6 +91,22 @@ export default function Profile() {
         event.target.value = '';
     }
 
+    function removeFaceEnrollment() {
+        router.delete('/profile/face-enrollment', {
+            preserveScroll: true,
+            onSuccess: () => {
+                setFaceEnrollmentError(null);
+                setFaceEnrollmentMessage('Your face data has been removed.');
+            },
+            onError: (errors) => {
+                setFaceEnrollmentError(
+                    errors.face_enrollment ??
+                        'Face identity could not be removed.',
+                );
+            },
+        });
+    }
+
     return (
         <>
             <Head title="Profile" />
@@ -115,12 +145,16 @@ export default function Profile() {
                                 )}
                             </div>
                             <div className="space-y-2">
-                                <p className="text-sm font-semibold">Profile photo</p>
+                                <p className="text-sm font-semibold">
+                                    Profile photo
+                                </p>
                                 <button
                                     className="rounded-sm border border-[#123d36] px-4 py-2 text-sm font-semibold text-[#123d36] transition hover:bg-[#edf2ed] disabled:opacity-60"
                                     type="button"
                                     disabled={form.processing}
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() =>
+                                        fileInputRef.current?.click()
+                                    }
                                 >
                                     Change Photo
                                 </button>
@@ -228,6 +262,58 @@ export default function Profile() {
                             )}
                         </div>
                     </form>
+                    {user.role === 'user' && (
+                        <section
+                            className="mb-10 max-w-xl space-y-4 border-y border-[#dce3dc] py-8"
+                            aria-labelledby="face-enrollment-title"
+                        >
+                            <div>
+                                <h2
+                                    id="face-enrollment-title"
+                                    className="text-xl font-semibold"
+                                >
+                                    Face identity
+                                </h2>
+                                <p className="mt-2 text-sm leading-6 text-[#68766f]">
+                                    {faceEnrollment.enrolled
+                                        ? 'An encrypted face template is stored for duplicate-registration prevention. The captured photo is not retained for new enrollments. Face matching is not used for login.'
+                                        : 'Face enrollment is available during account creation only. You can continue signing in with your existing email and password without a face scan.'}
+                                </p>
+                                {faceEnrollment.enrolled && (
+                                    <p className="mt-2 text-xs text-[#68766f]">
+                                        You can withdraw consent and request
+                                        deletion here. The enrollment is also
+                                        removed when your account is deleted.
+                                    </p>
+                                )}
+                            </div>
+                            {faceEnrollment.enrolled && (
+                                <button
+                                    className="rounded-sm border border-[#a3483f] px-4 py-2 text-sm font-semibold text-[#a3483f] transition hover:bg-[#fbefed]"
+                                    type="button"
+                                    onClick={removeFaceEnrollment}
+                                >
+                                    Remove Face Enrollment
+                                </button>
+                            )}
+                            {faceEnrollmentError && (
+                                <p
+                                    className="text-sm text-[#a3483f]"
+                                    role="alert"
+                                >
+                                    {faceEnrollmentError}
+                                </p>
+                            )}
+                            {faceEnrollmentMessage && (
+                                <p
+                                    className="text-sm text-[#173c34]"
+                                    role="status"
+                                >
+                                    {faceEnrollmentMessage}
+                                </p>
+                            )}
+                        </section>
+                    )}
                     <Link
                         href="/dashboard"
                         className="text-sm font-semibold text-[#123d36] underline underline-offset-4"

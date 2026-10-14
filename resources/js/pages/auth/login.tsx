@@ -1,11 +1,20 @@
 import { Link, useForm } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import { type FormEvent } from 'react';
 import { home, register } from '@/routes';
 import { login as loginAction } from '@/actions/App/Http/Controllers/AuthController';
 import AuthShell from '../../components/AuthShell';
 
-export default function Login() {
-    const form = useForm({ email: '', password: '', remember: false });
+export default function Login({ status }: { status?: string | null }) {
+    const form = useForm<{
+        email: string;
+        password: string;
+        remember: boolean;
+    }>({
+        email: '',
+        password: '',
+        remember: false,
+    });
+
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         form.post(loginAction().url);
@@ -23,6 +32,14 @@ export default function Login() {
                 <h2>Sign in to your account</h2>
                 <p>Pick up where your Abuyog journey left off.</p>
             </div>
+            {status && (
+                <p
+                    className="mt-5 border border-[#d4e5d6] bg-[#f1f8f1] px-4 py-3 text-sm text-[#245b3d]"
+                    role="status"
+                >
+                    {status}
+                </p>
+            )}
             <form className="auth-form" onSubmit={submit}>
                 <label htmlFor="email">Email address</label>
                 <input
@@ -40,7 +57,7 @@ export default function Login() {
                 )}
                 <div className="label-row">
                     <label htmlFor="password">Password</label>
-                    <a href="#forgot-password">Forgot password?</a>
+                    <Link href="/forgot-password">Forgot password?</Link>
                 </div>
                 <input
                     id="password"

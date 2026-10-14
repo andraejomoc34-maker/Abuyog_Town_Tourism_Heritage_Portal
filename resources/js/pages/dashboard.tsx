@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import NotificationBell from '../components/NotificationBell';
 
 type IconName =
     | 'dashboard'
@@ -97,7 +98,7 @@ const navigation = [
     { label: 'My Inquiries', icon: 'review', href: '/my-inquiries' },
     { label: 'Favorites', icon: 'heart', href: '#favorites' },
     { label: 'My Reviews', icon: 'review', href: '#reviews' },
-    { label: 'Notifications', icon: 'bell', href: '#notifications' },
+    { label: 'Notifications', icon: 'bell', href: '/notifications' },
     { label: 'Profile', icon: 'profile', href: '/profile' },
     { label: 'Settings', icon: 'settings', href: '/profile' },
 ] satisfies { label: string; icon: IconName; href: string }[];
@@ -126,29 +127,6 @@ const destinations = [
         image: '/Abuyog-5.jpg',
     },
 ];
-
-const notifications = [
-    {
-        title: 'New destination added',
-        detail: 'There is more of Abuyog to discover.',
-        icon: 'pin',
-    },
-    {
-        title: 'Tourism announcement',
-        detail: 'Check the latest town updates.',
-        icon: 'sparkle',
-    },
-    {
-        title: 'Upcoming event',
-        detail: 'Buyogan Festival event details are to be announced.',
-        icon: 'calendar',
-    },
-    {
-        title: 'Review update',
-        detail: 'Your travel notes are ready to revisit.',
-        icon: 'review',
-    },
-] satisfies { title: string; detail: string; icon: IconName }[];
 
 function Avatar({ name, image }: { name: string; image?: string }) {
     const initials = name
@@ -340,21 +318,7 @@ export default function Dashboard() {
                                         type="search"
                                     />
                                 </label>
-                                <button
-                                    aria-label="View notifications"
-                                    className="relative rounded-sm p-2 text-[#53645d] transition hover:bg-[#f2ead9]"
-                                    onClick={() =>
-                                        document
-                                            .getElementById('notifications')
-                                            ?.scrollIntoView({
-                                                behavior: 'smooth',
-                                            })
-                                    }
-                                    type="button"
-                                >
-                                    <Icon name="bell" />
-                                    <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-[#bd8b3d]" />
-                                </button>
+                                <NotificationBell />
                                 <div className="relative">
                                     <button
                                         aria-expanded={profileOpen}
@@ -812,41 +776,7 @@ export default function Dashboard() {
                             </div>
                         </section>
 
-                        <section className="mb-9 grid gap-7 xl:grid-cols-[1.15fr_0.85fr]">
-                            <div id="notifications">
-                                <div className="mb-4">
-                                    <p className="mb-1 text-[10px] font-semibold tracking-[0.17em] text-[#bd8b3d] uppercase">
-                                        A little town news
-                                    </p>
-                                    <h2 className="font-serif text-2xl font-normal text-[#123d36]">
-                                        Notifications
-                                    </h2>
-                                </div>
-                                <div className="divide-y divide-[#dce3dc] border-y border-[#dce3dc] bg-[#fffdf8]">
-                                    {notifications.map((notification) => (
-                                        <article
-                                            className="flex items-start gap-3 px-4 py-3.5"
-                                            key={notification.title}
-                                        >
-                                            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf0e9] text-[#123d36]">
-                                                <Icon
-                                                    className="h-4 w-4"
-                                                    name={notification.icon}
-                                                />
-                                            </span>
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-[#34453f]">
-                                                    {notification.title}
-                                                </h3>
-                                                <p className="mt-1 text-xs leading-5 text-[#71807a]">
-                                                    {notification.detail}
-                                                </p>
-                                            </div>
-                                        </article>
-                                    ))}
-                                </div>
-                            </div>
-
+                        <section className="mb-9">
                             <div>
                                 <div className="mb-4">
                                     <p className="mb-1 text-[10px] font-semibold tracking-[0.17em] text-[#bd8b3d] uppercase">

@@ -198,8 +198,9 @@ class BookingController extends Controller
         $notifier->notifyForHotel(
             $booking->resort_id,
             'New hotel booking',
-            $booking->reference_number.' · '.$user->name.' · '.$booking->guests.' guests',
+            'A new booking request is ready for review.',
             '/hotel-admin/bookings/'.$booking->id,
+            'booking',
         );
 
         return redirect()->route('bookings.show', $booking)
@@ -208,7 +209,6 @@ class BookingController extends Controller
 
     public function updateStatus(Request $request, Booking $booking, ResortAdminNotifier $notifier): RedirectResponse
     {
-        abort_unless($request->user()?->role !== 'hotel_admin', 403);
         $this->authorize('update', $booking);
         $previousStatus = $booking->status;
 
@@ -220,13 +220,18 @@ class BookingController extends Controller
             'status' => $validated['status'],
         ]);
 
-        if ($previousStatus !== $validated['status'] && in_array($validated['status'], ['Confirmed', 'Rejected'], true)) {
-            $notifier->notifyForResort(
-                $booking->resort_id,
-                'Booking '.$validated['status'],
-                ($booking->reference_number ?: 'Booking #'.$booking->id).' is now '.$validated['status'].'.',
-                '/resort-admin/bookings/'.$booking->id,
-            );
+        if ($previousStatus !== $validated['status']) {
+            $booking->loadMissing(['user', 'resort']);
+
+            if ($booking->user instanceof User) {
+                $notifier->notifyUser(
+                    $booking->user,
+                    'Booking status updated',
+                    'Your booking at '.$booking->resort?->name.' is now '.$validated['status'].'.',
+                    '/my-bookings/'.$booking->id,
+                    'booking',
+                );
+            }
         }
 
         if ($validated['status'] === 'Confirmed') {

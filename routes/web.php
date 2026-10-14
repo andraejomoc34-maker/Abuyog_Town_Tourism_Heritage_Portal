@@ -5,10 +5,13 @@ use App\Http\Controllers\AdminResortController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\HotelAdminController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\MunicipalityAdminController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PublicAnnouncementController;
 use App\Http\Controllers\ResortAnnouncementController;
 use App\Http\Controllers\ResortController;
@@ -94,31 +97,42 @@ Route::get('/discover', function (): Response {
 Route::inertia('/discover/nature', 'discover/nature')->name('discover.nature');
 Route::inertia('/discover/heritage', 'discover/heritage')->name('discover.heritage');
 Route::inertia('/discover/culture', 'discover/culture')->name('discover.culture');
+Route::inertia('/discover/buyogan-festival', 'discover/buyogan-festival')->name('discover.buyogan-festival');
 Route::get('/resorts', [ResortController::class, 'index'])->name('resorts.index');
 Route::get('/resorts/{resort}', [ResortController::class, 'show'])->name('resorts.show');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'createLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+    Route::get('/forgot-password', [PasswordResetController::class, 'createLinkRequest'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'createPasswordReset'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
+        ->middleware('throttle:5,1')
+        ->name('password.update');
     Route::get('/register', [AuthController::class, 'createRegistration'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->name('register.store');
-    Route::post('/register/face-session', [AuthController::class, 'createFaceLivenessSession'])
+    Route::post('/register', [AuthController::class, 'register'])
         ->middleware('throttle:5,1')
-        ->name('register.face-session');
-    Route::post('/register/face-verification', [AuthController::class, 'completeFaceVerification'])
-        ->middleware('throttle:5,1')
-        ->name('register.face-verification');
-    Route::post('/register/face-cancel', [AuthController::class, 'cancelFaceLivenessSession'])
-        ->middleware('throttle:10,1')
-        ->name('register.face-cancel');
+        ->name('register.store');
     Route::get('/auth/facebook/redirect', [AuthController::class, 'redirectToFacebook'])->name('auth.facebook.redirect');
     Route::get('/auth/facebook/callback', [AuthController::class, 'handleFacebookCallback'])->name('auth.facebook.callback');
 });
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+        ->whereUuid('notification')
+        ->name('notifications.read');
     Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
     Route::patch('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
+    Route::delete('/profile/face-enrollment', [FaceEnrollmentController::class, 'destroy'])
+        ->middleware('throttle:5,1')
+        ->name('profile.face-enrollment.destroy');
     Route::get('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.complete-profile');
     Route::post('/auth/complete-profile', [AuthController::class, 'storeCompleteProfile'])->name('auth.complete-profile.store');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

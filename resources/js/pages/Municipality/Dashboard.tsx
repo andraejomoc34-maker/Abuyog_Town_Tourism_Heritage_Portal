@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import NotificationBell from '../../components/NotificationBell';
 
 type DashboardStats = {
     totalTouristSpots: number;
@@ -196,13 +197,16 @@ export default function MunicipalityDashboard({
                                     Dashboard
                                 </h2>
                             </div>
-                            <Link
-                                className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#173c34] px-4 text-sm font-semibold text-white transition hover:bg-[#245548]"
-                                href="/municipality-admin/announcements/create"
-                            >
-                                <Megaphone className="h-4 w-4 text-[#edbd73]" />
-                                New Announcement
-                            </Link>
+                            <div className="flex items-center gap-3">
+                                <NotificationBell />
+                                <Link
+                                    className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#173c34] px-4 text-sm font-semibold text-white transition hover:bg-[#245548]"
+                                    href="/municipality-admin/announcements/create"
+                                >
+                                    <Megaphone className="h-4 w-4 text-[#edbd73]" />
+                                    New Announcement
+                                </Link>
+                            </div>
                         </div>
 
                         <section

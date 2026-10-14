@@ -145,13 +145,6 @@ class AdminResortController extends Controller
             ->limit(5)
             ->get();
 
-        $recentBookings = Booking::query()
-            ->tap($baseQuery)
-            ->with('user', 'cottage')
-            ->latest()
-            ->limit(5)
-            ->get();
-
         $upcomingBookings = Booking::query()
             ->tap($baseQuery)
             ->whereIn('status', ['Pending', 'Confirmed'])
@@ -253,20 +246,8 @@ class AdminResortController extends Controller
             'pendingBookingsList' => $pendingBookingsList,
             'pendingInquiriesList' => $pendingInquiriesList,
             'recentInquiries' => $recentInquiries,
-            'recentBookings' => $recentBookings,
             'upcomingBookings' => $upcomingBookings,
             'cottageAvailability' => $cottageAvailability,
-            'notifications' => $user->unreadNotifications()
-                ->latest()
-                ->limit(5)
-                ->get()
-                ->map(fn ($notification): array => [
-                    'id' => $notification->id,
-                    'title' => $notification->data['title'] ?? 'Resort update',
-                    'message' => $notification->data['message'] ?? '',
-                    'url' => $notification->data['url'] ?? '/resort-admin',
-                    'createdAt' => $notification->created_at?->toIso8601String(),
-                ]),
         ]);
     }
 }

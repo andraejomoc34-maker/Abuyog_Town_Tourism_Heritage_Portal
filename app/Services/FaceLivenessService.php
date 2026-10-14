@@ -2,106 +2,134 @@
 
 namespace App\Services;
 
-use Illuminate\Http\UploadedFile;
+use Aws\Rekognition\RekognitionClient;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Crypt;
+use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 
 class FaceLivenessService
 {
     public function hasBrowserConfiguration(): bool
     {
-        return true;
+        $confidenceThreshold = (float) config('services.face_liveness.confidence_threshold', 80);
+        $region = config('services.face_liveness.region');
+        $identityPoolId = config('services.face_liveness.identity_pool_id');
+        $browserRegion = config('services.face_liveness.browser_region');
+        $browserIdentityPoolId = config('services.face_liveness.browser_identity_pool_id');
+
+        return filled($region)
+            && filled($identityPoolId)
+            && filled($browserRegion)
+            && filled($browserIdentityPoolId)
+            && $region === $browserRegion
+            && $identityPoolId === $browserIdentityPoolId
+            && $confidenceThreshold >= 80
+            && $confidenceThreshold <= 100;
     }
 
     public function createSession(): string
     {
-        return (string) Str::uuid();
-    }
-
-    public function createChallengeToken(): string
-    {
-        return bin2hex(random_bytes(16));
-    }
-
-    public function storeSessionChallenge(string $sessionId, string $challengeToken): void
-    {
-        Cache::put($this->challengeCacheKey($sessionId), [
-            'challenge_token' => $challengeToken,
-        ], now()->addMinutes(3));
-    }
-
-    public function recordLocalVerification(
-        string $sessionId,
-        string $challengeToken,
-        UploadedFile $capture,
-        float $confidence,
-        int $faceCount,
-    ): array {
-        $stored = Cache::get($this->challengeCacheKey($sessionId));
-
-        if (! is_array($stored)
-            || ! hash_equals((string) ($stored['challenge_token'] ?? ''), $challengeToken)) {
-            throw new RuntimeException('The local verification challenge is invalid.');
+        if (! $this->hasBrowserConfiguration()) {
+            throw new RuntimeException('Amazon Rekognition Face Liveness is not configured.');
         }
 
-        $realPath = $capture->getRealPath();
+        $sessionId = $this->client()->createFaceLivenessSession([
+            'Settings' => [
+                'AuditImagesLimit' => 0,
+            ],
+        ])->get('SessionId');
 
-        if (
-            ! $capture->isValid()
-            || ! is_string($realPath)
-            || @getimagesize($realPath) === false
-            || $confidence < 0.5
-            || $confidence > 1
-            || $faceCount !== 1
-        ) {
-            throw new RuntimeException('The local verification capture is invalid.');
+        if (! is_string($sessionId) || $sessionId === '') {
+            throw new RuntimeException('Amazon Rekognition did not return a liveness session.');
         }
 
-        $result = [
-            'status' => 'SUCCEEDED',
-            'confidence' => $confidence * 100,
-            'face_count' => $faceCount,
-        ];
-
-        Cache::put($this->resultCacheKey($sessionId), $result, now()->addMinutes(3));
-
-        return $result;
+        return $sessionId;
     }
 
     /**
-     * @return array{status: string, confidence: float|null, face_count: int}
+     * @return array{status: string, confidence: float}
      */
-    public function getSessionResults(string $sessionId): array
+    public function storeVerifiedReferenceImage(string $sessionId): array
     {
-        $result = Cache::get($this->resultCacheKey($sessionId));
+        $result = $this->client()->getFaceLivenessSessionResults([
+            'SessionId' => $sessionId,
+        ]);
 
-        if (! is_array($result)) {
-            return [
-                'status' => 'FAILED',
-                'confidence' => null,
-                'face_count' => 0,
-            ];
+        $confidence = $result->get('Confidence');
+        $status = $result->get('Status');
+        $referenceImage = $result->get('ReferenceImage');
+        $bytes = is_array($referenceImage) ? ($referenceImage['Bytes'] ?? null) : null;
+
+        if ($bytes instanceof StreamInterface) {
+            $bytes = $bytes->getContents();
+        } elseif (is_resource($bytes)) {
+            $bytes = stream_get_contents($bytes);
         }
 
+        if ($status !== 'SUCCEEDED'
+            || ! is_numeric($confidence)
+            || (float) $confidence < (float) config('services.face_liveness.confidence_threshold', 80)
+            || (float) $confidence > 100
+            || ! is_string($bytes)
+            || $bytes === '') {
+            throw new \UnexpectedValueException('Amazon Rekognition did not return a verified reference image.');
+        }
+
+        Cache::put(
+            $this->referenceImageCacheKey($sessionId),
+            Crypt::encryptString(base64_encode($bytes)),
+            now()->addMinutes(3),
+        );
+
         return [
-            'status' => (string) ($result['status'] ?? 'FAILED'),
-            'confidence' => isset($result['confidence']) && is_numeric($result['confidence'])
-                ? (float) $result['confidence']
-                : null,
-            'face_count' => isset($result['face_count']) && is_numeric($result['face_count'])
-                ? (int) $result['face_count']
-                : 0,
+            'status' => $status,
+            'confidence' => (float) $confidence,
         ];
     }
 
-    private function challengeCacheKey(string $sessionId): string
+    public function consumeVerifiedReferenceImage(string $sessionId): ?string
     {
-        return 'registration.face-liveness.challenge.'.hash('sha256', $sessionId);
+        $encryptedImage = Cache::pull($this->referenceImageCacheKey($sessionId));
+
+        if (! is_string($encryptedImage)) {
+            return null;
+        }
+
+        try {
+            $encodedImage = Crypt::decryptString($encryptedImage);
+        } catch (DecryptException $exception) {
+            report($exception);
+
+            return null;
+        }
+
+        $decodedImage = base64_decode($encodedImage, true);
+
+        return is_string($decodedImage) && $decodedImage !== '' ? $decodedImage : null;
     }
 
-    private function resultCacheKey(string $sessionId): string
+    public function hasVerifiedReferenceImage(string $sessionId): bool
     {
-        return 'registration.face-liveness.result.'.hash('sha256', $sessionId);
+        return Cache::has($this->referenceImageCacheKey($sessionId));
+    }
+
+    public function forgetVerifiedReferenceImage(string $sessionId): void
+    {
+        Cache::forget($this->referenceImageCacheKey($sessionId));
+    }
+
+    private function client(): RekognitionClient
+    {
+        return new RekognitionClient([
+            'version' => 'latest',
+            'region' => config('services.face_liveness.region'),
+        ]);
+    }
+
+    private function referenceImageCacheKey(string $sessionId): string
+    {
+        return 'registration.face-liveness.reference-image.'.hash('sha256', $sessionId);
     }
 }

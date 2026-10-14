@@ -42,7 +42,7 @@ const categories: DiscoverCategory[] = [
     },
     {
         name: 'FESTIVALS & EVENTS',
-        href: '/discover/culture',
+        href: '/discover/buyogan-festival',
         description: 'Experience local celebrations and memorable community events.',
         icon: Flower2,
         accent: 'bg-[#f4ebed]',

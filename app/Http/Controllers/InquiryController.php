@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Inquiry;
 use App\Models\Resort;
+use App\Models\User;
 use App\Services\ResortAdminNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -128,16 +129,21 @@ class InquiryController extends Controller
         $notifier->notifyForResort(
             $resort->id,
             'New inquiry',
-            $user->name.' sent a new inquiry.',
+            'A guest submitted an inquiry for your property.',
             '/resort-admin/inquiries/'.$inquiry->id,
+            'inquiry',
         );
 
         return redirect()->route('inquiries.index')->with('success', 'Inquiry submitted successfully.');
     }
 
-    public function updateStatus(Request $request, Inquiry $inquiry): RedirectResponse
-    {
+    public function updateStatus(
+        Request $request,
+        Inquiry $inquiry,
+        ResortAdminNotifier $notifier,
+    ): RedirectResponse {
         $this->authorize('update', $inquiry);
+        $previousStatus = $inquiry->status;
 
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:Pending,Answered,Closed'],
@@ -146,6 +152,20 @@ class InquiryController extends Controller
         $inquiry->update([
             'status' => $validated['status'],
         ]);
+
+        if ($previousStatus !== $validated['status']) {
+            $inquiry->loadMissing(['user', 'resort']);
+
+            if ($inquiry->user instanceof User) {
+                $notifier->notifyUser(
+                    $inquiry->user,
+                    'Inquiry status updated',
+                    'Your inquiry to '.$inquiry->resort?->name.' is now '.$validated['status'].'.',
+                    '/my-inquiries/'.$inquiry->id,
+                    'inquiry',
+                );
+            }
+        }
 
         if ($validated['status'] === 'Answered') {
             return back()->with('success', 'Inquiry answered.');

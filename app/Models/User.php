@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
+use App\Observers\UserObserver;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -28,6 +30,7 @@ use Illuminate\Support\Facades\Storage;
  */
 #[Fillable(['name', 'email', 'contact_number', 'password', 'role', 'resort_id', 'facebook_id', 'facebook_avatar', 'profile_photo_path', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
+#[ObservedBy([UserObserver::class])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -63,7 +66,7 @@ class User extends Authenticatable
     public function getAvatarAttribute(): ?string
     {
         if ($this->profile_photo_path) {
-            return Storage::disk('public')->url($this->profile_photo_path);
+            return '/storage/'.ltrim($this->profile_photo_path, '/');
         }
 
         return $this->facebook_avatar;
@@ -72,6 +75,11 @@ class User extends Authenticatable
     public function resort(): BelongsTo
     {
         return $this->belongsTo(Resort::class);
+    }
+
+    public function faceIdentity(): HasOne
+    {
+        return $this->hasOne(FaceIdentity::class);
     }
 
     public function bookings(): HasMany

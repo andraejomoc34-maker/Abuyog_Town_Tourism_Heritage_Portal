@@ -56,17 +56,21 @@ class FeedbackController extends Controller
             'email' => $user->email,
         ]);
 
-        $notifier->notifyForResort(
+        $booking->loadMissing('resort');
+        $notifier->notifyForProperty(
             $booking->resort_id,
             'New resort review',
-            $user->name.' submitted a '.$validated['rating'].'-star review.',
-            '/resort-admin/reviews',
+            'A guest submitted a '.$validated['rating'].'-star review.',
+            $booking->resort?->property_type === 'hotel'
+                ? '/hotel-admin'
+                : '/resort-admin/reviews',
+            'review',
         );
 
         return back()->with('success', 'Thank you for reviewing your stay.');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, ResortAdminNotifier $notifier): RedirectResponse
     {
         $user = $request->user();
 
@@ -88,6 +92,13 @@ class FeedbackController extends Controller
             ...$validated,
             'user_id' => $user instanceof User ? $user->id : null,
         ]);
+
+        $notifier->notifyMunicipalityAdmins(
+            'New visitor feedback',
+            'A visitor submitted feedback for the tourism portal.',
+            '/municipality-admin/feedback',
+            'feedback',
+        );
 
         return back()->with('success', 'Thank you for your feedback!');
     }

@@ -10,6 +10,7 @@ class ResortAdminNotification extends Notification
         public string $title,
         public string $message,
         public string $url,
+        public string $type = 'general',
     ) {}
 
     public function via(object $notifiable): array
@@ -23,6 +24,7 @@ class ResortAdminNotification extends Notification
             'title' => $this->title,
             'message' => $this->message,
             'url' => $this->url,
+            'type' => $this->type,
         ];
     }
 }

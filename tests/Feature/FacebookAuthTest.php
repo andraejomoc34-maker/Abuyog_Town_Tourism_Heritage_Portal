@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -50,6 +51,32 @@ function mockFacebookCallbackForTest(object $facebookUser): void
         ->with('facebook')
         ->once()
         ->andReturn($provider);
+}
+
+function configureLocalFaceEnrollmentForFacebookTest(): void
+{
+    config([
+        'services.face_service.enabled' => true,
+        'services.face_service.url' => 'http://127.0.0.1:8001',
+        'services.face_service.token' => 'local-test-token',
+        'services.face_service.model' => 'Facenet',
+    ]);
+
+    Http::fake([
+        'http://127.0.0.1:8001/enroll' => Http::response([
+            'face_detected' => true,
+            'model' => 'Facenet',
+            'embedding' => array_fill(0, 128, 0.1),
+        ], 200),
+    ]);
+}
+
+function validFaceUploadForFacebookTest(): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent(
+        'facebook-face.png',
+        base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=', true),
+    );
 }
 
 it('registers the expected stateful Facebook OAuth redirect and minimum scopes', function () {
@@ -152,12 +179,12 @@ it('stages a new Facebook user until face verification and registration succeed'
         'email' => 'facebook.user@example.com',
         'contact_number' => '09171234567',
         'terms' => true,
-    ])->assertSessionHasErrors('face_verification');
+    ])->assertSessionHasErrors(['face_biometric_consent', 'face_image']);
 
     $this->assertDatabaseMissing('users', ['email' => 'facebook.user@example.com']);
 });
 
-it('creates a staged Facebook user only after server-verified liveness', function () {
+it('creates a staged Facebook user only after server-side face processing', function () {
     configureFacebookOAuthForTest();
     mockFacebookCallbackForTest(fakeFacebookProfileForTest(
         'fb-789',
@@ -166,25 +193,15 @@ it('creates a staged Facebook user only after server-verified liveness', functio
     ));
 
     $this->get(route('auth.facebook.callback'))->assertRedirect(route('register'));
-    $this->post(route('register.face-session'))->assertRedirect(route('register'));
-    $challengeToken = session('registration.face_liveness.challenge_token');
-    $imageContents = base64_decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
-        true,
-    );
-
-    $this->post(route('register.face-verification'), [
-        'challenge_token' => $challengeToken,
-        'capture' => UploadedFile::fake()->createWithContent('verified-face-capture.png', $imageContents),
-        'face_confidence' => 0.95,
-        'face_count' => 1,
-    ])->assertRedirect(route('register'));
+    configureLocalFaceEnrollmentForFacebookTest();
 
     $this->post(route('register.store'), [
         'name' => 'Verified Facebook User',
         'email' => 'verified.facebook@example.com',
         'contact_number' => '09171234567',
         'terms' => true,
+        'face_biometric_consent' => true,
+        'face_image' => validFaceUploadForFacebookTest(),
     ])->assertRedirect(route('dashboard'));
 
     $user = User::query()->where('email', 'verified.facebook@example.com')->firstOrFail();
@@ -220,46 +237,32 @@ it('allows missing Facebook email to be supplied through normal customer registr
     $this->get(route('auth.facebook.callback'))
         ->assertRedirect(route('register'))
         ->assertSessionHas('pending_facebook_signup.facebook_id', 'fb-no-email');
-
     $this->get(route('register'))
         ->assertInertia(fn ($page) => $page
             ->component('auth/register')
             ->where('pendingFacebookSignup.email', null));
 
-    $this->post(route('register.face-session'))
-        ->assertRedirect(route('register'))
-        ->assertSessionHas('pending_facebook_signup.facebook_id', 'fb-no-email');
-
-    $challengeToken = session('registration.face_liveness.challenge_token');
-    expect($challengeToken)->toBeString()->not->toBeEmpty();
-    $imageContents = base64_decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l0cAAAAASUVORK5CYII=',
-        true,
-    );
-
-    $this->post(route('register.face-verification'), [
-        'challenge_token' => $challengeToken,
-        'capture' => UploadedFile::fake()->createWithContent('facebook-face-capture.png', $imageContents),
-        'face_confidence' => 0.92,
-        'face_count' => 1,
-    ])->assertRedirect(route('register'))
-        ->assertSessionHas('pending_facebook_signup.facebook_id', 'fb-no-email');
-
     $this->post(route('register.store'), [
         'name' => 'No Email User',
         'email' => 'supplied.email@example.com',
+        'face_biometric_consent' => true,
+        'face_image' => validFaceUploadForFacebookTest(),
         'terms' => true,
+        'face_biometric_consent' => true,
     ])->assertSessionHasErrors('contact_number');
 
     $this->assertDatabaseMissing('users', ['facebook_id' => 'fb-no-email']);
     expect(session('pending_facebook_signup.facebook_id'))->toBe('fb-no-email');
 
+    configureLocalFaceEnrollmentForFacebookTest();
     $this->post(route('register.store'), [
         'name' => 'No Email User',
         'email' => 'supplied.email@example.com',
         'contact_number' => '09171234567',
         'facebook_id' => 'browser-supplied-fake-id',
         'terms' => true,
+        'face_biometric_consent' => true,
+        'face_image' => validFaceUploadForFacebookTest(),
     ])->assertRedirect(route('dashboard'));
 
     $user = User::query()->where('facebook_id', 'fb-no-email')->firstOrFail();

@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import NotificationBell from '../../components/NotificationBell';
 import {
     BedDouble,
     CalendarDays,
@@ -495,6 +496,9 @@ export default function HotelDashboard({
                             <div>
                                 <p className="text-[10px] font-semibold tracking-[0.2em] text-[#a96d22]">HOTEL ADMIN</p>
                                 <h1 className="mt-1 text-xl font-semibold text-[#173c34] sm:text-2xl">{title}</h1>
+                            </div>
+                            <div className="ml-auto">
+                                <NotificationBell />
                             </div>
                         </header>
 
