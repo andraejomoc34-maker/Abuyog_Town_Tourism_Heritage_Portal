@@ -6,6 +6,8 @@ use App\Models\Booking;
 use App\Models\HotelRoom;
 use App\Models\Resort;
 use App\Models\User;
+use App\Services\ContentChangeLogger;
+use App\Services\ContentImageManager;
 use App\Services\ResortAdminNotifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -195,9 +197,11 @@ class HotelAdminController extends Controller
         return $this->render($request, 'profile');
     }
 
-    public function updateSettings(Request $request): RedirectResponse
+    public function updateSettings(Request $request, ContentImageManager $imageManager, ContentChangeLogger $history): RedirectResponse
     {
         $hotel = $this->hotelFor($request);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 403);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'location' => ['required', 'string', 'max:255'],
@@ -205,7 +209,13 @@ class HotelAdminController extends Controller
             'contact_information' => ['nullable', 'string', 'max:255'],
             'amenities' => ['nullable', 'string', 'max:3000'],
             'price_information' => ['nullable', 'string', 'max:5000'],
+            'remove_primary_image' => ['sometimes', 'boolean'],
+            ...ContentImageManager::validationRules(),
         ]);
+        $images = $validated['images'] ?? [];
+        $removeImageIds = $validated['remove_image_ids'] ?? [];
+        $removePrimaryImage = (bool) ($validated['remove_primary_image'] ?? false);
+        unset($validated['images'], $validated['remove_image_ids'], $validated['remove_primary_image']);
 
         if (array_key_exists('amenities', $validated)) {
             $amenities = preg_split('/\R/u', $validated['amenities'] ?? '', -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -221,7 +231,18 @@ class HotelAdminController extends Controller
 
             $validated['amenities'] = $validatedAmenities['amenities'];
         }
-        $hotel->update($validated);
+        $imageManager->transaction(function (ContentImageManager $manager) use ($hotel, $validated, $images, $removeImageIds, $removePrimaryImage, $history, $actor): void {
+            $before = $history->snapshot($hotel);
+
+            if ($removePrimaryImage) {
+                $validated['image_url'] = null;
+                $validated['image'] = null;
+            }
+
+            $hotel->update($validated);
+            $manager->sync($hotel, $images, $removeImageIds);
+            $history->record($actor, $hotel, 'edited', $before, $history->snapshot($hotel));
+        });
 
         return back()->with('success', 'Hotel profile updated.');
     }
@@ -232,7 +253,7 @@ class HotelAdminController extends Controller
         ?Booking $selectedBooking = null,
         ?string $calendarMonth = null,
     ): Response {
-        $hotel = $this->hotelFor($request);
+        $hotel = $this->hotelFor($request)->load('images');
         $bookings = $this->hotelBookings($hotel);
         $monthStart = $calendarMonth
             ? Carbon::createFromFormat('Y-m', $calendarMonth)->startOfMonth()

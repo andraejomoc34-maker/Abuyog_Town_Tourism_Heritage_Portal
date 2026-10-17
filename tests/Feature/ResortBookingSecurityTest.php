@@ -5,6 +5,7 @@ use App\Models\Booking;
 use App\Models\Cottage;
 use App\Models\Feedback;
 use App\Models\HotelRoom;
+use App\Models\Inquiry;
 use App\Models\Resort;
 use App\Models\User;
 use Database\Seeders\EllenFuentesTravellersInnSeeder;
@@ -13,6 +14,41 @@ use Database\Seeders\HabitatBudgetInnSeeder;
 use Database\Seeders\VillageCondotelSeeder;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+
+it('does not expose booking or inquiry records on public resort pages', function () {
+    $resort = Resort::query()->create([
+        'name' => 'Public resort',
+        'location' => 'Abuyog, Leyte',
+        'status' => 'active',
+    ]);
+    $guest = User::factory()->create();
+
+    Booking::query()->create([
+        'user_id' => $guest->id,
+        'resort_id' => $resort->id,
+        'booking_date' => today()->addDay(),
+        'guests' => 2,
+        'message' => 'Private booking message',
+        'status' => 'Pending',
+    ]);
+    Inquiry::query()->create([
+        'user_id' => $guest->id,
+        'resort_id' => $resort->id,
+        'message' => 'Private inquiry message',
+        'contact_information' => 'private-contact@example.com',
+        'status' => 'Pending',
+    ]);
+
+    $this->get(route('resorts.show', $resort))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('resort.name', 'Public resort')
+            ->missing('resort.bookings')
+            ->missing('resort.inquiries'))
+        ->assertDontSee('Private booking message')
+        ->assertDontSee('Private inquiry message')
+        ->assertDontSee('private-contact@example.com');
+});
 
 it('prevents users from viewing another user\'s booking', function () {
     $owner = User::factory()->create(['role' => 'user']);
@@ -842,8 +878,8 @@ it('keeps resort announcements separate from municipality announcements and enfo
         ->get('/resort-admin/announcements')
         ->assertInertia(fn (Assert $page) => $page
             ->component('Admin/Announcements/Index')
-            ->has('announcements', 1)
-            ->where('announcements.0.title', 'Castañas Update'));
+            ->has('announcements.data', 1)
+            ->where('announcements.data.0.title', 'Castañas Update'));
 
     $this->get('/resort-admin/announcements/'.$globalAnnouncement->id.'/edit')->assertForbidden();
     $this->get('/resort-admin/announcements/'.$validaAnnouncement->id.'/edit')->assertForbidden();
@@ -851,8 +887,8 @@ it('keeps resort announcements separate from municipality announcements and enfo
     $this->actingAs($municipalityAdmin)
         ->get('/municipality-admin/announcements')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('announcements', 1)
-            ->where('announcements.0.title', 'Municipal Notice'));
+            ->has('announcements.data', 1)
+            ->where('announcements.data.0.title', 'Municipal Notice'));
 
     $this->actingAs($castanasAdmin)->post('/resort-admin/announcements', [
         'title' => 'New Castañas Notice',

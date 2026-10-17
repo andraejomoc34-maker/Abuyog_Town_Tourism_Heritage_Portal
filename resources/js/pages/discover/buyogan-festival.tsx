@@ -367,6 +367,10 @@ export default function BuyoganFestival() {
                                         is confirmed here. Check official
                                         announcements before making plans.
                                     </p>
+                                    <Link href="/events" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#f0c978] underline decoration-[#f0c978]/45 underline-offset-4 transition hover:text-white">
+                                        Browse the events calendar
+                                        <span aria-hidden="true">{'\u2197'}</span>
+                                    </Link>
                                 </article>
                                 <div className="sm:col-span-2">
                                     <p className="text-xs leading-5 text-white/50">

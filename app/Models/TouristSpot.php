@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class TouristSpot extends Model
 {
@@ -18,4 +19,9 @@ class TouristSpot extends Model
     protected $casts = [
         'status' => 'string',
     ];
+
+    public function images(): MorphMany
+    {
+        return $this->morphMany(ContentImage::class, 'imageable')->orderBy('sort_order')->orderBy('id');
+    }
 }

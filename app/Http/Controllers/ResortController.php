@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Resort;
+use App\Services\DestinationViewRecorder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +21,7 @@ class ResortController extends Controller
             ->withCount(['hotelRooms as bookable_rooms_count' => fn (Builder $query) => $query
                 ->where('status', 'Available')
                 ->where('available_quantity', '>', 0)])
+            ->with('images')
             ->with(['users' => fn (HasMany $query) => $query
                 ->where('role', 'resort_admin')
                 ->select(['id', 'name', 'resort_id'])])
@@ -49,8 +52,12 @@ class ResortController extends Controller
         ]);
     }
 
-    public function show(Resort $resort): Response
+    public function show(Request $request, Resort $resort, DestinationViewRecorder $recorder): Response
     {
+        if (strtolower((string) ($resort->status ?? 'active')) === 'active') {
+            $recorder->record($request, $resort);
+        }
+
         $isActive = strtolower((string) ($resort->status ?? 'active')) === 'active';
         $isHotel = $resort->property_type === 'hotel';
         $hasBookableInventory = $isHotel
@@ -59,8 +66,8 @@ class ResortController extends Controller
 
         return Inertia::render('Resorts/Show', [
             'resort' => $isHotel
-                ? $resort->load('hotelRooms')
-                : $resort->load('bookings', 'inquiries'),
+                ? $resort->load('hotelRooms', 'images')
+                : $resort->load('images'),
             'canBook' => $isActive && $resort->isBookable() && $hasBookableInventory,
             'canInquire' => $isActive,
             'auth' => [

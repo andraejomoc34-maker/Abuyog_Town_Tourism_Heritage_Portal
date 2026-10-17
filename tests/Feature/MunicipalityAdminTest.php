@@ -61,6 +61,42 @@ it('shows database-backed cross-resort records to municipality admins without gr
         ->assertForbidden();
 });
 
+it('filters municipality bookings by every valid status and ignores invalid status values', function () {
+    $resort = Resort::query()->create([
+        'name' => 'Status Filter Resort',
+        'status' => 'active',
+    ]);
+    $customer = User::factory()->create(['role' => 'user']);
+
+    foreach (['Pending', 'Confirmed', 'Rejected', 'Cancelled', 'Completed'] as $status) {
+        Booking::query()->create([
+            'user_id' => $customer->id,
+            'resort_id' => $resort->id,
+            'booking_date' => now()->addDay()->toDateString(),
+            'guests' => 1,
+            'status' => $status,
+        ]);
+    }
+
+    $this->actingAs(User::factory()->create(['role' => 'municipality_admin']));
+
+    foreach (['Pending', 'Confirmed', 'Rejected', 'Cancelled', 'Completed'] as $status) {
+        $this->get(route('municipality-admin.bookings', ['status' => $status]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('records', 1)
+                ->where('records.0.status', $status));
+    }
+
+    $this->get(route('municipality-admin.bookings', ['status' => 'unknown']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('records', 5));
+
+    $this->get(route('municipality-admin.bookings', ['status' => ['Pending']]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('records', 5));
+});
+
 it('allows municipality and super admins to manage announcements and exposes only published entries publicly', function () {
     $municipalityAdmin = User::factory()->create(['role' => 'municipality_admin']);
 
@@ -72,6 +108,7 @@ it('allows municipality and super admins to manage announcements and exposes onl
             'category' => 'Festival',
             'status' => 'Draft',
             'published_at' => null,
+            'event_start_date' => '2026-11-20',
         ])
         ->assertRedirect(route('municipality-admin.announcements.index'));
 
@@ -99,6 +136,60 @@ it('allows municipality and super admins to manage announcements and exposes onl
     $this->actingAs($superAdmin)
         ->patch(route('super-admin.announcements.status', $announcement), ['status' => 'Archived'])
         ->assertRedirect(route('super-admin.announcements.index'));
+
+    $this->get(route('home'))
+        ->assertInertia(fn (Assert $page) => $page->has('announcements', 0));
+    $this->get(route('announcements.show', $announcement->slug))->assertNotFound();
+});
+
+it('lets authorized staff publish edited tourism and heritage content and hides drafts and archived entries', function () {
+    $municipalityAdmin = User::factory()->create(['role' => 'municipality_admin']);
+
+    $this->actingAs($municipalityAdmin)
+        ->post(route('municipality-admin.announcements.store'), [
+            'title' => 'Abuyog Heritage Notes',
+            'excerpt' => 'Draft tourism information.',
+            'content' => 'Draft content.',
+            'category' => 'Tourism Update',
+            'status' => 'Draft',
+        ])
+        ->assertRedirect(route('municipality-admin.announcements.index'));
+
+    $announcement = Announcement::query()->where('slug', 'abuyog-heritage-notes')->firstOrFail();
+
+    $this->get(route('home'))
+        ->assertInertia(fn (Assert $page) => $page->has('announcements', 0));
+    $this->get(route('announcements.show', $announcement->slug))->assertNotFound();
+
+    $this->actingAs($municipalityAdmin)
+        ->put(route('municipality-admin.announcements.update', $announcement), [
+            'title' => 'Abuyog Heritage Notes',
+            'excerpt' => 'Published visitor information.',
+            'content' => 'Updated heritage and tourism content.',
+            'category' => 'Heritage',
+            'status' => 'Published',
+            'published_at' => now()->toDateTimeString(),
+        ])
+        ->assertRedirect(route('municipality-admin.announcements.index'));
+
+    expect($announcement->refresh()->category)->toBe('Heritage')
+        ->and($announcement->excerpt)->toBe('Published visitor information.')
+        ->and($announcement->content)->toBe('Updated heritage and tourism content.')
+        ->and($announcement->status)->toBe('Published');
+
+    $this->get(route('home'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('announcements', 1)
+            ->where('announcements.0.category', 'Heritage')
+            ->where('announcements.0.excerpt', 'Published visitor information.'));
+    $this->get(route('announcements.show', $announcement->slug))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('announcement.category', 'Heritage')
+            ->where('announcement.content', 'Updated heritage and tourism content.'));
+
+    $this->actingAs($municipalityAdmin)
+        ->patch(route('municipality-admin.announcements.status', $announcement), ['status' => 'Archived'])
+        ->assertRedirect(route('municipality-admin.announcements.index'));
 
     $this->get(route('home'))
         ->assertInertia(fn (Assert $page) => $page->has('announcements', 0));

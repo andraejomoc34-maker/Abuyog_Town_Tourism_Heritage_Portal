@@ -72,6 +72,7 @@ const navGroups = [
         label: 'Operations',
         items: [
             { label: 'Announcements', href: '/municipality-admin/announcements', icon: Megaphone },
+            { label: 'Content history', href: '/content-history', icon: ClipboardList },
             { label: 'Resorts', href: '/municipality-admin/resorts', icon: Building2 },
             { label: 'Resort Information', href: '/municipality-admin/resorts', icon: House },
             { label: 'Cottages', href: '/municipality-admin/cottages', icon: House },

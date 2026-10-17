@@ -1,5 +1,6 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import NotificationBell from '../../components/NotificationBell';
+import FlashMessages from '../../components/FlashMessages';
 import {
     BedDouble,
     CalendarDays,
@@ -20,6 +21,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import MultipleImageUpload, { type ExistingContentImage } from '../../components/MultipleImageUpload';
 
 type Section = 'dashboard' | 'bookings' | 'calendar' | 'rooms' | 'guests' | 'reports' | 'profile' | 'settings';
 type Hotel = {
@@ -30,6 +32,9 @@ type Hotel = {
     contact_information?: string | null;
     amenities?: string[] | null;
     price_information?: string | null;
+    image?: string | null;
+    image_url?: string | null;
+    images?: { id: number; url: string }[];
 };
 type Room = {
     id: number;
@@ -334,6 +339,7 @@ export default function HotelDashboard({
     bookingTrends: { month: string; bookings: number }[];
 }) {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const flash = usePage<{ flash?: { success?: string; error?: string } }>().props.flash;
     const settingsForm = useForm({
         name: hotel.name,
         location: hotel.location ?? '',
@@ -341,7 +347,18 @@ export default function HotelDashboard({
         contact_information: hotel.contact_information ?? '',
         amenities: (hotel.amenities ?? []).join('\n'),
         price_information: hotel.price_information ?? '',
+        images: [] as File[],
+        remove_image_ids: [] as number[],
+        remove_primary_image: false,
     });
+    const existingHotelImages: ExistingContentImage[] = [
+        ...((hotel.image_url || hotel.image) && !settingsForm.data.remove_primary_image
+            ? [{ id: null, url: (hotel.image_url || hotel.image)!, label: 'Current hotel cover image' }]
+            : []),
+        ...(hotel.images ?? [])
+            .filter((image) => !settingsForm.data.remove_image_ids.includes(image.id))
+            .map((image) => ({ ...image, label: 'Current hotel gallery image' })),
+    ];
     const newRoomForm = useForm({
         name: '',
         room_type: '',
@@ -435,6 +452,7 @@ export default function HotelDashboard({
         <>
             <Head title={`Hotel Admin · ${title}`} />
             <div className="min-h-screen bg-[#f8f3e8] text-[#173c34]">
+                <div className="px-4 pt-4"><FlashMessages success={flash?.success} error={flash?.error} /></div>
                 {mobileOpen && <button aria-label="Close hotel navigation" className="fixed inset-0 z-30 bg-[#092c28]/55 lg:hidden" onClick={() => setMobileOpen(false)} />}
                 <div className="mx-auto flex min-h-screen max-w-[1600px]">
                     <aside id="hotel-admin-sidebar" className={`fixed inset-y-0 left-0 z-40 w-[min(19rem,86vw)] overflow-y-auto bg-[#173c34] px-5 py-6 text-white transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:shrink-0 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -689,7 +707,7 @@ export default function HotelDashboard({
                                     <form onSubmit={saveSettings} className="max-w-3xl rounded-lg border border-[#e5dcc9] bg-white/95 p-5 shadow-[0_8px_24px_rgba(23,60,52,0.05)] sm:p-7">
                                     <p className="text-[10px] font-semibold tracking-[0.18em] text-[#a96d22]">HOTEL ADMIN</p>
                                     <h2 className="mt-1 text-2xl font-semibold text-[#173c34]">Hotel profile</h2>
-                                    <p className="mt-2 text-sm text-[#718078]">Only Abuyog Hotel profile details can be changed here. Ownership, account roles, and hotel assignment are not editable.</p>
+                                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-[#718078]">Only Abuyog Hotel profile details can be changed here. Ownership, account roles, and hotel assignment are not editable.</p><Link href="/content-history" className="shrink-0 text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4">Content history</Link></div>
                                     <div className="mt-5 space-y-4">
                                         <label className="block text-sm font-medium">Hotel name<input value={settingsForm.data.name} onChange={(event) => settingsForm.setData('name', event.target.value)} className={formFieldClasses} required />{settingsForm.errors.name && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.name}</span>}</label>
                                         <label className="block text-sm font-medium">Location<input value={settingsForm.data.location} onChange={(event) => settingsForm.setData('location', event.target.value)} className={formFieldClasses} required />{settingsForm.errors.location && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.location}</span>}</label>
@@ -697,6 +715,21 @@ export default function HotelDashboard({
                                         <label className="block text-sm font-medium">Contact information<textarea rows={3} value={settingsForm.data.contact_information} onChange={(event) => settingsForm.setData('contact_information', event.target.value)} className={formFieldClasses} /><span className="mt-1 block text-xs text-[#718078]">Use one detail per line, for example: Phone: 09276030650 and Email: abuyoghotel111@gmail.com.</span>{settingsForm.errors.contact_information && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.contact_information}</span>}</label>
                                         <label className="block text-sm font-medium">Facilities and amenities<textarea rows={8} value={settingsForm.data.amenities} onChange={(event) => settingsForm.setData('amenities', event.target.value)} className={formFieldClasses} /><span className="mt-1 block text-xs text-[#718078]">Enter one amenity per line. Up to 30 entries, 100 characters each.</span>{settingsForm.errors.amenities && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.amenities}</span>}</label>
                                         <label className="block text-sm font-medium">Price information<textarea rows={3} value={settingsForm.data.price_information} onChange={(event) => settingsForm.setData('price_information', event.target.value)} className={formFieldClasses} /></label>
+                                        <MultipleImageUpload
+                                            id="hotel-profile-images"
+                                            files={settingsForm.data.images}
+                                            existingImages={existingHotelImages}
+                                            errors={settingsForm.errors}
+                                            progress={settingsForm.progress?.percentage}
+                                            onFilesChange={(files) => settingsForm.setData('images', files)}
+                                            onRemoveExisting={(image) => {
+                                                if (image.id === null) {
+                                                    settingsForm.setData('remove_primary_image', true);
+                                                } else {
+                                                    settingsForm.setData('remove_image_ids', [...settingsForm.data.remove_image_ids, image.id]);
+                                                }
+                                            }}
+                                        />
                                     </div>
                                     <button disabled={settingsForm.processing} className="mt-5 rounded-none bg-[#173c34] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">Save profile</button>
                                 </form>

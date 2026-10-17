@@ -13,6 +13,10 @@ const categories = [
 
 type DestinationCategory = (typeof categories)[number];
 
+function normalizeSearchText(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+}
+
 const places = [
     {
         title: 'Coastal Landscapes',
@@ -117,15 +121,14 @@ export default function Nature() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] =
         useState<DestinationCategory>('All Destinations');
-    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    const normalizedQuery = normalizeSearchText(searchQuery);
     const filteredPlaces = places.filter((place) => {
         const matchesCategory =
             activeCategory === 'All Destinations' ||
             place.filterCategories.includes(activeCategory);
         const matchesSearch =
             normalizedQuery.length === 0 ||
-            `${place.title} ${place.category} ${place.location} ${place.description}`
-                .toLocaleLowerCase()
+            normalizeSearchText(`${place.title} ${place.category} ${place.location} ${place.description}`)
                 .includes(normalizedQuery);
 
         return matchesCategory && matchesSearch;

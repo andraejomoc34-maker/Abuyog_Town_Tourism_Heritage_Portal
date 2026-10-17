@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\AccountSecurityHistoryController;
 use App\Http\Controllers\AdminAccountController;
 use App\Http\Controllers\AdminResortController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ContentHistoryController;
+use App\Http\Controllers\DestinationViewController;
 use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\HotelAdminController;
@@ -13,25 +16,41 @@ use App\Http\Controllers\MunicipalityAdminController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PublicAnnouncementController;
+use App\Http\Controllers\PublicEventCalendarController;
 use App\Http\Controllers\ResortAnnouncementController;
 use App\Http\Controllers\ResortController;
 use App\Http\Controllers\ResortCottageController;
 use App\Http\Controllers\ResortGuestController;
+use App\Http\Controllers\ScamReportController;
+use App\Http\Controllers\TouristSpotManagementController;
 use App\Http\Middleware\EnsureResortAdminEnabled;
 use App\Models\Resort;
 use App\Models\TouristSpot;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
 
 Route::get('/', [PublicAnnouncementController::class, 'index'])->name('home');
 Route::get('/announcements/{announcement}', [PublicAnnouncementController::class, 'show'])->name('announcements.show');
+Route::get('/events', PublicEventCalendarController::class)->name('events.index');
+Route::post('/destination-views', [DestinationViewController::class, 'store'])
+    ->middleware('throttle:120,1')
+    ->name('destination-views.store');
 Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('throttle:5,1')->name('feedback.store');
+Route::get('/report-concern', [ScamReportController::class, 'create'])->name('account-concern.create');
+Route::post('/report-concern', [ScamReportController::class, 'store'])
+    ->middleware('throttle:3,10')
+    ->name('account-concern.store');
 Route::inertia('/travel-guide', 'travel-guide')->name('travel-guide');
-Route::get('/map', function (): Response {
+Route::get('/map', function (Request $request): Response {
     return Inertia::render('map', [
+        'search' => is_string($request->query('search'))
+            ? trim($request->query('search'))
+            : '',
         'resorts' => Resort::query()
             ->where('status', 'active')
+            ->with('images')
             ->get([
                 'id',
                 'name',
@@ -39,6 +58,10 @@ Route::get('/map', function (): Response {
                 'location',
                 'image',
                 'image_url',
+                'contact_information',
+                'amenities',
+                'price_information',
+                'property_type',
                 'status',
             ])
             ->map(fn (Resort $resort): array => [
@@ -47,11 +70,17 @@ Route::get('/map', function (): Response {
                 'description' => $resort->description,
                 'location' => $resort->location,
                 'image_url' => $resort->image_url,
+                'images' => $resort->images->map(fn ($image): array => ['id' => $image->id, 'url' => $image->url])->all(),
+                'contact_information' => $resort->contact_information,
+                'amenities' => $resort->amenities,
+                'price_information' => $resort->price_information,
+                'property_type' => $resort->property_type,
                 'status' => $resort->status,
             ])
             ->all(),
         'touristSpots' => TouristSpot::query()
             ->where('status', 'active')
+            ->with('images')
             ->get([
                 'id',
                 'name',
@@ -68,6 +97,7 @@ Route::get('/map', function (): Response {
                 'location' => $spot->location,
                 'category' => $spot->category,
                 'image_url' => $spot->image_url,
+                'images' => $spot->images->map(fn ($image): array => ['id' => $image->id, 'url' => $image->url])->all(),
                 'status' => $spot->status,
             ])
             ->all(),
@@ -75,7 +105,7 @@ Route::get('/map', function (): Response {
 })->name('map');
 Route::get('/discover', function (): Response {
     return Inertia::render('discover/index', [
-        'touristSpots' => TouristSpot::query()->where('status', 'active')->get([
+        'touristSpots' => TouristSpot::query()->where('status', 'active')->with('images')->get([
             'id',
             'name',
             'description',
@@ -90,6 +120,7 @@ Route::get('/discover', function (): Response {
             'location' => $spot->location,
             'category' => $spot->category,
             'image_url' => $spot->image_url,
+            'images' => $spot->images->map(fn ($image): array => ['id' => $image->id, 'url' => $image->url])->all(),
             'status' => $spot->status,
         ])->all(),
     ]);
@@ -103,7 +134,9 @@ Route::get('/resorts/{resort}', [ResortController::class, 'show'])->name('resort
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'createLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:5,1')
+        ->name('login.store');
     Route::get('/forgot-password', [PasswordResetController::class, 'createLinkRequest'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
         ->middleware('throttle:5,1')
@@ -121,6 +154,7 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/content-history', [ContentHistoryController::class, 'index'])->name('content-history.index');
     Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('dashboard');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
@@ -184,6 +218,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/resort-admin/announcements/{announcement}/edit', [ResortAnnouncementController::class, 'edit'])->name('resort-admin.announcements.edit');
         Route::put('/resort-admin/announcements/{announcement}', [ResortAnnouncementController::class, 'update'])->name('resort-admin.announcements.update');
         Route::patch('/resort-admin/announcements/{announcement}/status', [ResortAnnouncementController::class, 'updateStatus'])->name('resort-admin.announcements.status');
+        Route::patch('/resort-admin/announcements/{announcement}/restore', [ResortAnnouncementController::class, 'restore'])->name('resort-admin.announcements.restore');
         Route::get('/resort-admin/settings', [AdminResortController::class, 'settings'])->name('resort-admin.settings');
         Route::patch('/resort-admin/settings', [AdminResortController::class, 'updateSettings'])->name('resort-admin.settings.update');
         Route::patch('/resort-admin/notifications/{notification}/read', [AdminResortController::class, 'markNotificationRead'])->name('resort-admin.notifications.read');
@@ -212,7 +247,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/super-admin/bookings', [AuthController::class, 'superAdminDashboard'])->name('super-admin.bookings');
     Route::get('/super-admin/inquiries', [AuthController::class, 'superAdminDashboard'])->name('super-admin.inquiries');
     Route::get('/super-admin/feedback', [FeedbackController::class, 'index'])->name('super-admin.feedback');
+    Route::get('/super-admin/reports', [MunicipalityAdminController::class, 'reports'])->name('super-admin.reports');
     Route::get('/super-admin/accounts', [AdminAccountController::class, 'index'])->name('super-admin.accounts.index');
+    Route::get('/super-admin/account-security-history', [AccountSecurityHistoryController::class, 'index'])->name('super-admin.accounts.security-history');
+    Route::get('/super-admin/account-reports', [ScamReportController::class, 'index'])->name('super-admin.accounts.reports');
+    Route::patch('/super-admin/account-reports/{scamReport}', [ScamReportController::class, 'review'])->name('super-admin.accounts.reports.review');
     Route::get('/super-admin/accounts/create', [AdminAccountController::class, 'create'])->name('super-admin.accounts.create');
     Route::post('/super-admin/accounts', [AdminAccountController::class, 'store'])->name('super-admin.accounts.store');
     Route::get('/super-admin/accounts/{user}/edit', [AdminAccountController::class, 'edit'])->name('super-admin.accounts.edit');
@@ -224,10 +263,20 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/super-admin/announcements/{announcement}/edit', [AnnouncementController::class, 'edit'])->name('super-admin.announcements.edit');
     Route::put('/super-admin/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('super-admin.announcements.update');
     Route::patch('/super-admin/announcements/{announcement}/status', [AnnouncementController::class, 'updateStatus'])->name('super-admin.announcements.status');
+    Route::patch('/super-admin/announcements/{announcement}/restore', [AnnouncementController::class, 'restore'])->name('super-admin.announcements.restore');
     Route::delete('/super-admin/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('super-admin.announcements.destroy');
 
     Route::get('/municipality-admin', [MunicipalityAdminController::class, 'dashboard'])->name('municipality-admin.dashboard');
-    Route::get('/municipality-admin/tourist-spots', [MunicipalityAdminController::class, 'touristSpots'])->name('municipality-admin.tourist-spots');
+    Route::get('/municipality-admin/tourist-spots', [TouristSpotManagementController::class, 'index'])->name('municipality-admin.tourist-spots');
+    Route::get('/municipality-admin/tourist-spots/create', [TouristSpotManagementController::class, 'create'])->name('municipality-admin.tourist-spots.create');
+    Route::post('/municipality-admin/tourist-spots', [TouristSpotManagementController::class, 'store'])->name('municipality-admin.tourist-spots.store');
+    Route::get('/municipality-admin/tourist-spots/{touristSpot}/edit', [TouristSpotManagementController::class, 'edit'])->whereNumber('touristSpot')->name('municipality-admin.tourist-spots.edit');
+    Route::put('/municipality-admin/tourist-spots/{touristSpot}', [TouristSpotManagementController::class, 'update'])->whereNumber('touristSpot')->name('municipality-admin.tourist-spots.update');
+    Route::patch('/municipality-admin/tourist-spots/{touristSpot}/status', [TouristSpotManagementController::class, 'updateStatus'])->whereNumber('touristSpot')->name('municipality-admin.tourist-spots.status');
+    Route::patch('/municipality-admin/tourist-spots/{touristSpot}/restore', [TouristSpotManagementController::class, 'restore'])->whereNumber('touristSpot')->name('municipality-admin.tourist-spots.restore');
+    Route::patch('/municipality-admin/tourist-spots/{touristSpot}/images', [MunicipalityAdminController::class, 'updateTouristSpotImages'])
+        ->whereNumber('touristSpot')
+        ->name('municipality-admin.tourist-spots.images.update');
     Route::get('/municipality-admin/resorts', [MunicipalityAdminController::class, 'resorts'])->name('municipality-admin.resorts');
     Route::get('/municipality-admin/cottages', [MunicipalityAdminController::class, 'cottages'])->name('municipality-admin.cottages');
     Route::get('/municipality-admin/bookings', [MunicipalityAdminController::class, 'bookings'])->name('municipality-admin.bookings');
@@ -241,5 +290,6 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/municipality-admin/announcements/{announcement}/edit', [AnnouncementController::class, 'edit'])->name('municipality-admin.announcements.edit');
     Route::put('/municipality-admin/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('municipality-admin.announcements.update');
     Route::patch('/municipality-admin/announcements/{announcement}/status', [AnnouncementController::class, 'updateStatus'])->name('municipality-admin.announcements.status');
+    Route::patch('/municipality-admin/announcements/{announcement}/restore', [AnnouncementController::class, 'restore'])->name('municipality-admin.announcements.restore');
     Route::delete('/municipality-admin/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('municipality-admin.announcements.destroy');
 });

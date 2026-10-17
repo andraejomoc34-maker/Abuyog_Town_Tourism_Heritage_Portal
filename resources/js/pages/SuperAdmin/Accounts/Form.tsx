@@ -6,23 +6,24 @@ type Account = {
     id: number;
     name: string;
     email: string;
-    role: 'municipality_admin' | 'resort_admin';
+    role: 'user' | 'municipality_admin' | 'resort_admin';
     resort_id: number | null;
     is_active: boolean;
 };
 
 export default function AdminAccountForm({
     account,
+    roles,
     resorts,
 }: {
     account: Account | null;
-    roles: string[];
+    roles: Array<'user' | 'municipality_admin' | 'resort_admin'>;
     resorts: Array<{ id: number; name: string }>;
 }) {
     const form = useForm({
         name: account?.name ?? '',
         email: account?.email ?? '',
-        role: account?.role ?? 'municipality_admin',
+        role: account?.role ?? roles[0] ?? 'municipality_admin',
         resort_id: account?.resort_id ? String(account.resort_id) : '',
         password: '',
     });
@@ -38,16 +39,17 @@ export default function AdminAccountForm({
     }
 
     const inputClass = 'w-full rounded-md border border-[#dcd5c8] bg-white px-3.5 py-3 text-sm outline-none focus:border-[#bd8b3d] focus:ring-2 focus:ring-[#d99d4b]/20';
+    const heading = account ? 'Edit Account' : form.data.role === 'user' ? 'Create Visitor Account' : 'Create Admin Account';
 
     return (
         <>
-            <Head title={account ? 'Edit Admin Account' : 'Create Admin Account'} />
+            <Head title={heading} />
             <main className="min-h-screen bg-[#f8f3e8] px-5 py-8 text-[#173c34] sm:px-8">
                 <div className="mx-auto max-w-2xl">
                     <Link className="inline-flex items-center gap-2 text-sm text-[#53645d]" href="/super-admin/accounts"><ArrowLeft className="h-4 w-4" />Admin Accounts</Link>
                     <div className="mt-5 border-b border-[#ded7c8] pb-5">
                         <p className="text-[10px] font-bold tracking-[0.2em] text-[#9b6a28]">SUPER ADMIN</p>
-                        <h1 className="mt-2 font-serif text-3xl font-normal">{account ? 'Edit Admin Account' : 'Create Admin Account'}</h1>
+                        <h1 className="mt-2 font-serif text-3xl font-normal">{heading}</h1>
                     </div>
                     <form className="mt-6 space-y-5 rounded-lg border border-[#e5ddce] bg-white p-5 sm:p-7" onSubmit={submit}>
                         <div>
@@ -62,9 +64,8 @@ export default function AdminAccountForm({
                         </div>
                         <div>
                             <label className="mb-2 block text-sm font-medium" htmlFor="admin-role">Role</label>
-                            <select className={inputClass} id="admin-role" onChange={(event) => { form.setData('role', event.target.value as 'municipality_admin' | 'resort_admin'); form.setData('resort_id', ''); }} value={form.data.role}>
-                                <option value="municipality_admin">Municipality Admin</option>
-                                <option value="resort_admin">Resort Admin</option>
+                            <select className={inputClass} id="admin-role" onChange={(event) => { form.setData('role', event.target.value as Account['role']); form.setData('resort_id', ''); }} value={form.data.role}>
+                                {roles.map((role) => <option key={role} value={role}>{role === 'user' ? 'Visitor' : role === 'municipality_admin' ? 'Municipality Admin' : 'Resort Admin'}</option>)}
                             </select>
                             {form.errors.role && <p className="mt-1 text-xs text-red-700">{form.errors.role}</p>}
                         </div>

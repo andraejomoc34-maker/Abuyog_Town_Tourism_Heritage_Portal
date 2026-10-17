@@ -83,6 +83,10 @@ function Icon({
     );
 }
 
+function searchDestinations(search: string): void {
+    router.get('/map', { search: search.trim() }, { preserveState: false });
+}
+
 const navigation = [
     { label: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
     { label: 'Discover', icon: 'discover', href: '/#discover' },
@@ -153,6 +157,7 @@ function Avatar({ name, image }: { name: string; image?: string }) {
 export default function Dashboard() {
     const { auth } = usePage().props;
     const user = auth.user;
+    const [destinationSearch, setDestinationSearch] = useState('');
     const [mobileOpen, setMobileOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
     const [favorites, setFavorites] = useState(destinations.slice(0, 2));
@@ -314,8 +319,16 @@ export default function Dashboard() {
                                     <input
                                         aria-label="Search"
                                         className="w-36 bg-transparent text-sm text-[#1c2926] outline-none placeholder:text-[#8b9690] lg:w-48"
+                                        onChange={(event) => setDestinationSearch(event.target.value)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter') {
+                                                event.preventDefault();
+                                                searchDestinations(destinationSearch);
+                                            }
+                                        }}
                                         placeholder="Search Abuyog"
                                         type="search"
+                                        value={destinationSearch}
                                     />
                                 </label>
                                 <NotificationBell />

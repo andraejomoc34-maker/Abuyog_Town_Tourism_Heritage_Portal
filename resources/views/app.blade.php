@@ -17,33 +17,7 @@
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">
-        <div class="initial-preloader" id="initial-preloader" role="status" aria-live="polite">
-            <div class="initial-preloader__art">
-                <img
-                    class="initial-preloader__image"
-                    src="{{ asset('images/abuyog-preloader.png') }}"
-                    alt=""
-                    fetchpriority="high"
-                    decoding="async"
-                >
-                <span class="initial-preloader__spinner" aria-hidden="true"></span>
-                <span class="initial-preloader__message">Preparing your Abuyog experience…</span>
-            </div>
-        </div>
-        <script>
-            (() => {
-                const preloader = document.getElementById('initial-preloader');
-
-                if (!preloader) {
-                    return;
-                }
-
-                preloader.dataset.fallbackTimer = window.setTimeout(() => {
-                    preloader.classList.add('is-exiting');
-                    window.setTimeout(() => preloader.remove(), 400);
-                }, 12000).toString();
-            })();
-        </script>
+        @include('components.initial-preloader')
         <x-inertia::app />
     </body>
 </html>

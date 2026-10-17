@@ -1,5 +1,7 @@
-import { Archive, Check, CirclePause, FilePlus2, Pencil, Trash2 } from 'lucide-react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Archive, Check, CirclePause, FilePlus2, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import type { FormEvent } from 'react';
+import FlashMessages from '../../../components/FlashMessages';
 
 type Announcement = {
     id: number;
@@ -11,14 +13,34 @@ type Announcement = {
     updatedAt: string | null;
 };
 
+type AnnouncementPage = {
+    data: Announcement[];
+    links: Array<{ url: string | null; label: string; active: boolean }>;
+    from: number | null;
+    to: number | null;
+    total: number;
+};
+
 export default function AnnouncementIndex({
     announcements,
     baseUrl,
+    filters,
+    categories,
 }: {
-    announcements: Announcement[];
+    announcements: AnnouncementPage;
     baseUrl: string;
     canManageAccounts: boolean;
+    filters: { search: string; status: string; category: string };
+    categories: string[];
 }) {
+    const form = useForm(filters);
+    const flash = usePage<{ flash?: { success?: string; error?: string } }>().props.flash;
+
+    function applyFilters(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        router.get(baseUrl, form.data, { preserveState: true, replace: true });
+    }
+
     function setStatus(announcement: Announcement, status: Announcement['status']) {
         router.patch(
             `${baseUrl}/${announcement.id}/status`,
@@ -35,11 +57,18 @@ export default function AnnouncementIndex({
         }
     }
 
+    function restoreAnnouncement(announcement: Announcement) {
+        if (window.confirm(`Restore "${announcement.title}" as a draft? It will remain hidden from visitors.`)) {
+            router.patch(`${baseUrl}/${announcement.id}/restore`, {}, { preserveScroll: true });
+        }
+    }
+
     return (
         <>
             <Head title="Announcements" />
             <main className="min-h-screen bg-[#f8f3e8] px-5 py-8 text-[#173c34] sm:px-8">
                 <div className="mx-auto max-w-6xl">
+                    <FlashMessages success={flash?.success} error={flash?.error} />
                     <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-[#ded7c8] pb-5">
                         <div>
                             <p className="text-[10px] font-bold tracking-[0.2em] text-[#9b6a28]">ABUYOG MUNICIPAL TOURISM OFFICE</p>
@@ -49,6 +78,7 @@ export default function AnnouncementIndex({
                             <Link className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4" href={baseUrl.startsWith('/super-admin') ? '/super-admin' : '/municipality-admin'}>
                                 Dashboard
                             </Link>
+                            <Link className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4" href="/content-history">Content history</Link>
                             <Link className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#173c34] px-4 text-sm font-semibold text-white hover:bg-[#245548]" href={`${baseUrl}/create`}>
                                 <FilePlus2 className="h-4 w-4 text-[#edbd73]" />
                                 Create Announcement
@@ -56,7 +86,15 @@ export default function AnnouncementIndex({
                         </div>
                     </div>
 
-                    {announcements.length === 0 ? (
+                    <form onSubmit={applyFilters} className="mb-4 grid gap-3 rounded-lg border border-[#e5ddce] bg-white p-4 sm:grid-cols-[1fr_190px_190px_auto_auto]">
+                        <input aria-label="Search announcements" className="rounded-md border border-[#dcd5c8] px-3 py-2 text-sm" placeholder="Search title or content" value={form.data.search} onChange={(event) => form.setData('search', event.target.value)} />
+                        <select aria-label="Filter announcement status" className="rounded-md border border-[#dcd5c8] px-3 py-2 text-sm" value={form.data.status} onChange={(event) => form.setData('status', event.target.value)}><option value="">All statuses</option><option value="Draft">Draft</option><option value="Published">Published</option><option value="Archived">Archived</option></select>
+                        <select aria-label="Filter announcement category" className="rounded-md border border-[#dcd5c8] px-3 py-2 text-sm" value={form.data.category} onChange={(event) => form.setData('category', event.target.value)}><option value="">All categories</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select>
+                        <button className="rounded-md bg-[#173c34] px-4 py-2 text-sm font-semibold text-white" type="submit">Search</button>
+                        <Link className="self-center text-center text-sm text-[#53645d] underline" href={baseUrl}>Clear</Link>
+                    </form>
+
+                    {announcements.data.length === 0 ? (
                         <div className="rounded-lg border border-[#e5ddce] bg-white px-5 py-14 text-center">
                             <p className="font-serif text-xl">No announcements yet</p>
                             <p className="mt-2 text-sm text-[#68766f]">Drafts and published updates will appear here.</p>
@@ -75,7 +113,7 @@ export default function AnnouncementIndex({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#eee7da]">
-                                        {announcements.map((announcement) => (
+                                        {announcements.data.map((announcement) => (
                                             <tr key={announcement.id}>
                                                 <td className="px-4 py-4">
                                                     <p className="font-medium">{announcement.title}</p>
@@ -93,7 +131,11 @@ export default function AnnouncementIndex({
                                                         <Link aria-label={`Edit ${announcement.title}`} className="rounded-md p-2 text-[#53645d] hover:bg-[#f4f1e8]" href={`${baseUrl}/${announcement.id}/edit`}>
                                                             <Pencil className="h-4 w-4" />
                                                         </Link>
-                                                        {announcement.status !== 'Published' && (
+                                                        {announcement.status === 'Archived' ? (
+                                                            <button aria-label={`Restore ${announcement.title}`} className="rounded-md p-2 text-[#245548] hover:bg-[#edf4ed]" onClick={() => restoreAnnouncement(announcement)} type="button">
+                                                                <RotateCcw className="h-4 w-4" />
+                                                            </button>
+                                                        ) : announcement.status !== 'Published' && (
                                                             <button aria-label={`Publish ${announcement.title}`} className="rounded-md p-2 text-[#245548] hover:bg-[#edf4ed]" onClick={() => setStatus(announcement, 'Published')} type="button">
                                                                 <Check className="h-4 w-4" />
                                                             </button>
@@ -120,6 +162,10 @@ export default function AnnouncementIndex({
                             </div>
                         </div>
                     )}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[#53645d]">
+                        <span>Showing {announcements.from ?? 0}–{announcements.to ?? 0} of {announcements.total}</span>
+                        <nav aria-label="Announcement pages" className="flex gap-1">{announcements.links.map((link, index) => <button key={`${link.label}-${index}`} disabled={!link.url} onClick={() => link.url && router.visit(link.url)} className={`min-w-9 rounded px-2 py-1 ${link.active ? 'bg-[#173c34] text-white' : 'bg-white text-[#53645d]'} disabled:opacity-40`} type="button">{link.label.replace('&laquo;', '‹').replace('&raquo;', '›')}</button>)}</nav>
+                    </div>
                 </div>
             </main>
         </>

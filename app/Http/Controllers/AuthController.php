@@ -54,7 +54,7 @@ class AuthController extends Controller
 
         if (! $user->is_active) {
             return back()->withErrors([
-                'email' => 'This account has been disabled.',
+                'email' => 'This account has been disabled. Please contact the portal administrator if you believe this is an error.',
             ])->onlyInput('email');
         }
 
@@ -149,7 +149,10 @@ class AuthController extends Controller
             }
 
             if (! $user->is_active) {
-                return $this->facebookLoginError($request, 'This account has been disabled.');
+                return $this->facebookLoginError(
+                    $request,
+                    'This account has been disabled. Please contact the portal administrator if you believe this is an error.',
+                );
             }
 
             $request->session()->forget('pending_facebook_signup');

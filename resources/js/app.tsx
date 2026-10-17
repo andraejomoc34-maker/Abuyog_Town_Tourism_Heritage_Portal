@@ -1,6 +1,7 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { Amplify } from 'aws-amplify';
 import { useEffect, type ReactNode } from 'react';
+import { useInitialPreloader } from './components/InitialPreloader';
 
 const appName =
     import.meta.env.VITE_APP_NAME || 'Abuyog Tourism & Heritage Portal';
@@ -19,32 +20,7 @@ if (identityPoolId && faceLivenessRegion) {
 }
 
 function InitialApp({ children }: { children: ReactNode }) {
-    useEffect(() => {
-        const preloader = document.getElementById('initial-preloader');
-
-        if (!preloader) {
-            return;
-        }
-
-        const fallbackTimer = Number(preloader.dataset.fallbackTimer);
-        window.clearTimeout(fallbackTimer);
-
-        const removePreloader = () => preloader.remove();
-        const removeAfterFade = (event: TransitionEvent) => {
-            if (event.target === preloader && event.propertyName === 'opacity') {
-                removePreloader();
-            }
-        };
-
-        preloader.addEventListener('transitionend', removeAfterFade);
-        preloader.classList.add('is-exiting');
-        const transitionTimer = window.setTimeout(removePreloader, 400);
-
-        return () => {
-            preloader.removeEventListener('transitionend', removeAfterFade);
-            window.clearTimeout(transitionTimer);
-        };
-    }, []);
+    useInitialPreloader();
 
     return children;
 }

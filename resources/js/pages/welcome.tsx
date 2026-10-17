@@ -763,6 +763,12 @@ export default function Welcome() {
                             View Festival{' '}
                             <span className="ml-2">{'\u2197'}</span>
                         </Link>
+                        <Link
+                            href="/events"
+                            className="mt-9 ml-3 inline-flex rounded-none border border-white/60 px-7 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-1 hover:border-[#f0c978] hover:text-[#f0c978]"
+                        >
+                            Events Calendar
+                        </Link>
                     </div>
                 </section>
 
@@ -872,7 +878,7 @@ export default function Welcome() {
                             </Link>
                             <Link
                                 href="/resorts"
-                                className="inline-flex rounded-none border border-[#173c34] bg-transparent px-7 py-4 text-sm font-semibold text-[#173c34] transition duration-300 hover:-translate-y-1 hover:border-[#d99d4b] hover:bg-[#173c34] hover:text-white"
+                                className="inline-flex rounded-none border border-[#173c34] bg-transparent px-7 py-4 text-sm font-semibold text-[#173c34] transition duration-300 hover:-translate-y-1 hover:border-[#d99d4b] hover:bg-gold hover:text-white"
                             >
                                 VIEW RESORTS {'\u2192'}
                             </Link>

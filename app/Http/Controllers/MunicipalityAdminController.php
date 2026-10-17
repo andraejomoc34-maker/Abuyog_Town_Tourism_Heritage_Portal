@@ -8,7 +8,13 @@ use App\Models\Inquiry;
 use App\Models\Resort;
 use App\Models\TouristSpot;
 use App\Models\User;
+use App\Services\ContentChangeLogger;
+use App\Services\ContentImageManager;
+use App\Services\TourismAnalytics;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -54,8 +60,12 @@ class MunicipalityAdminController extends Controller
         $query = Booking::query()->with(['user:id,name', 'resort:id,name']);
         $status = $request->query('status');
 
-        if (in_array($status, ['Pending', 'Confirmed', 'Completed'], true)) {
-            $query->where('status', $status);
+        if (is_string($status)) {
+            $status = trim($status);
+
+            if (in_array($status, ['Pending', 'Confirmed', 'Rejected', 'Cancelled', 'Completed'], true)) {
+                $query->where('status', $status);
+            }
         }
 
         $rows = $query->latest()
@@ -112,16 +122,52 @@ class MunicipalityAdminController extends Controller
         $this->authorizeMunicipalityAccess($request);
 
         $rows = TouristSpot::query()
+            ->with('images')
             ->orderBy('name')
-            ->get(['name', 'category', 'location', 'status'])
+            ->get(['id', 'name', 'category', 'location', 'image_url', 'status'])
             ->map(fn (TouristSpot $spot): array => [
+                'id' => $spot->id,
                 'name' => $spot->name,
                 'category' => $spot->category,
                 'location' => $spot->location,
                 'status' => $spot->status,
+                'primaryImageUrl' => $spot->image_url,
+                'images' => $spot->images->map(fn ($image): array => [
+                    'id' => $image->id,
+                    'url' => $image->url,
+                ])->all(),
             ]);
 
         return $this->records('Tourist Spots', $rows->all(), 'No tourist spots are recorded.');
+    }
+
+    public function updateTouristSpotImages(
+        Request $request,
+        TouristSpot $touristSpot,
+        ContentImageManager $imageManager,
+        ContentChangeLogger $history,
+    ): RedirectResponse {
+        $actor = $this->authorizeMunicipalityAccess($request);
+        $validated = $request->validate([
+            'remove_primary_image' => ['sometimes', 'boolean'],
+            ...ContentImageManager::validationRules(),
+        ]);
+        $images = $validated['images'] ?? [];
+        $removeImageIds = $validated['remove_image_ids'] ?? [];
+        $removePrimaryImage = (bool) ($validated['remove_primary_image'] ?? false);
+
+        $imageManager->transaction(function (ContentImageManager $manager) use ($touristSpot, $images, $removeImageIds, $removePrimaryImage, $history, $actor): void {
+            $before = $history->snapshot($touristSpot);
+
+            if ($removePrimaryImage) {
+                $touristSpot->update(['image_url' => null]);
+            }
+
+            $manager->sync($touristSpot, $images, $removeImageIds);
+            $history->record($actor, $touristSpot, 'edited', $before, $history->snapshot($touristSpot));
+        });
+
+        return back()->with('success', 'Destination images updated.');
     }
 
     public function cottages(Request $request): Response
@@ -135,13 +181,45 @@ class MunicipalityAdminController extends Controller
         );
     }
 
-    public function reports(Request $request): Response
+    public function reports(Request $request, TourismAnalytics $analytics): Response
     {
         $user = $this->authorizeMunicipalityAccess($request);
+        $today = CarbonImmutable::now('Asia/Manila')->toDateString();
+        $validated = $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'resort_id' => ['nullable', 'integer', 'exists:resorts,id'],
+        ]);
+        $to = $validated['to'] ?? $today;
+        $from = $validated['from'] ?? CarbonImmutable::parse($to, 'Asia/Manila')->subDays(29)->toDateString();
+        $fromDate = CarbonImmutable::parse($from, 'Asia/Manila');
+        $toDate = CarbonImmutable::parse($to, 'Asia/Manila');
+
+        if ($fromDate->greaterThan($toDate)) {
+            throw ValidationException::withMessages([
+                'from' => 'The start date must be on or before the end date.',
+            ]);
+        }
+
+        if ($fromDate->diffInDays($toDate) > 365) {
+            throw ValidationException::withMessages([
+                'from' => 'Choose a date range of 366 days or less.',
+            ]);
+        }
 
         return Inertia::render('Municipality/Reports', [
             'user' => ['name' => $user->name],
             'stats' => $this->statistics(),
+            'analytics' => $analytics->report(
+                $from,
+                $to,
+                isset($validated['resort_id']) ? (int) $validated['resort_id'] : null,
+                $user->role === 'super_admin',
+            ),
+            'resorts' => Resort::query()->orderBy('name')->get(['id', 'name']),
+            'dashboardUrl' => $user->role === 'super_admin'
+                ? route('super-admin.dashboard')
+                : route('municipality-admin.dashboard'),
         ]);
     }
 

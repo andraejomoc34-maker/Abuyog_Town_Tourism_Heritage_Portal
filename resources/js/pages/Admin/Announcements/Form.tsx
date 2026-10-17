@@ -1,6 +1,7 @@
 import { ArrowLeft, ImagePlus, Save } from 'lucide-react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import MultipleImageUpload, { type ExistingContentImage } from '../../../components/MultipleImageUpload';
 
 type AnnouncementDraft = {
     id: number;
@@ -8,6 +9,7 @@ type AnnouncementDraft = {
     excerpt: string | null;
     content: string;
     featuredImageUrl: string | null;
+    images: { id: number; url: string }[];
     category: string;
     status: 'Draft' | 'Published' | 'Archived';
     publishedAt: string | null;
@@ -17,7 +19,9 @@ type AnnouncementFormData = {
     title: string;
     excerpt: string;
     content: string;
-    featured_image: File | null;
+    images: File[];
+    remove_image_ids: number[];
+    remove_featured_image: boolean;
     category: string;
     status: 'Draft' | 'Published' | 'Archived';
     published_at: string;
@@ -36,11 +40,21 @@ export default function ResortAnnouncementForm({
         title: announcement?.title ?? '',
         excerpt: announcement?.excerpt ?? '',
         content: announcement?.content ?? '',
-        featured_image: null,
+        images: [],
+        remove_image_ids: [],
+        remove_featured_image: false,
         category: announcement?.category ?? categories[0] ?? 'Resort Update',
         status: announcement?.status ?? 'Draft',
         published_at: announcement?.publishedAt ?? '',
     });
+    const existingImages: ExistingContentImage[] = [
+        ...(announcement?.featuredImageUrl && !form.data.remove_featured_image
+            ? [{ id: null, url: announcement.featuredImageUrl, label: 'Current cover image' }]
+            : []),
+        ...(announcement?.images ?? [])
+            .filter((image) => !form.data.remove_image_ids.includes(image.id))
+            .map((image) => ({ ...image, label: 'Current gallery image' })),
+    ];
 
     const save = (status: AnnouncementFormData['status']) => {
         form.transform((data) => ({ ...data, status }));
@@ -98,12 +112,21 @@ export default function ResortAnnouncementForm({
                                 {form.errors.published_at && <p className="mt-1 text-xs text-red-700">{form.errors.published_at}</p>}
                             </div>
                         </div>
-                        <div>
-                            <label htmlFor="announcement-image" className="mb-2 block text-sm font-semibold">Featured image</label>
-                            <input id="announcement-image" className={inputClass} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => form.setData('featured_image', event.target.files?.[0] ?? null)} />
-                            {announcement?.featuredImageUrl && <img src={announcement.featuredImageUrl} alt="Current announcement" className="mt-3 aspect-[16/9] max-h-56 rounded-xl object-cover" />}
-                            {form.errors.featured_image && <p className="mt-1 text-xs text-red-700">{form.errors.featured_image}</p>}
-                        </div>
+                        <MultipleImageUpload
+                            id="resort-announcement-gallery-images"
+                            files={form.data.images}
+                            existingImages={existingImages}
+                            errors={form.errors}
+                            progress={form.progress?.percentage}
+                            onFilesChange={(files) => form.setData('images', files)}
+                            onRemoveExisting={(image) => {
+                                if (image.id === null) {
+                                    form.setData('remove_featured_image', true);
+                                } else {
+                                    form.setData('remove_image_ids', [...form.data.remove_image_ids, image.id]);
+                                }
+                            }}
+                        />
                         <div className="flex flex-wrap justify-between gap-3 border-t border-[#eee7da] pt-5">
                             <Link href="/resort-admin/announcements" className="self-center text-sm font-medium text-[#68766f]">Cancel</Link>
                             <div className="flex flex-wrap gap-2">

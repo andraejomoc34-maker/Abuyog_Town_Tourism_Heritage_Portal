@@ -145,6 +145,20 @@ test('login works with email and password without an enrolled face or face-servi
     Http::assertNothingSent();
 });
 
+test('login requests are rate limited', function () {
+    foreach (range(1, 5) as $attempt) {
+        $this->post(route('login.store'), [
+            'email' => 'unknown@example.com',
+            'password' => 'invalid-password',
+        ])->assertRedirect();
+    }
+
+    $this->post(route('login.store'), [
+        'email' => 'unknown@example.com',
+        'password' => 'invalid-password',
+    ])->assertTooManyRequests();
+});
+
 test('an existing user without biometric enrollment can sign in and sign out normally', function () {
     config([
         'services.face_service.enabled' => true,

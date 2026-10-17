@@ -7,6 +7,7 @@ type PublicAnnouncement = {
     content: string;
     category: string;
     featuredImageUrl: string | null;
+    images: { url: string }[];
     publishedAt: string;
     author: string;
 };
@@ -28,6 +29,15 @@ export default function AnnouncementShow({
                         <PublicMobileMenu />
                     </div>
                     {announcement.featuredImageUrl && <img alt="" className="mt-6 aspect-[16/9] w-full rounded-lg object-cover" src={announcement.featuredImageUrl} />}
+                    {announcement.images.filter((image) => image.url !== announcement.featuredImageUrl).length > 0 && (
+                        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            {announcement.images
+                                .filter((image) => image.url !== announcement.featuredImageUrl)
+                                .map((image, index) => (
+                                    <img key={`${image.url}-${index}`} alt={`${announcement.title} photo ${index + 1}`} className="aspect-[4/3] w-full rounded-lg object-cover" loading="lazy" src={image.url} />
+                                ))}
+                        </div>
+                    )}
                     <p className="mt-7 text-xs font-bold tracking-[0.18em] text-[#9b6a28] uppercase">{announcement.category}</p>
                     <h1 className="mt-3 font-serif text-3xl font-normal leading-tight sm:text-4xl">{announcement.title}</h1>
                     <p className="mt-4 text-sm text-[#68766f]">

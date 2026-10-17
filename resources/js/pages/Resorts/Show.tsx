@@ -16,6 +16,7 @@ type Resort = {
     status?: string | null;
     property_type?: string | null;
     property_code?: string | null;
+    images?: { id: number; url: string }[];
     hotel_rooms?: HotelRoom[];
 };
 
@@ -49,6 +50,7 @@ export default function ResortShow({
     const isEllenFuentesTravellersInn = resort.property_code === 'ellen-fuentes-travellers-inn';
     const canBookNow = canBook === true;
     const canSubmitInquiry = !isHabitatBudgetInn && !isFlorinaCountryLodge && !isEllenFuentesTravellersInn && (canInquire ?? isActive);
+    const mainImage = resort.image_url || resort.image || resort.images?.[0]?.url || '/abuyog-2.jpg';
 
     if (resort.property_code === 'abuyog-hotel') {
         return (
@@ -92,10 +94,17 @@ export default function ResortShow({
                 <main className="mx-auto max-w-6xl px-6 py-14 lg:px-10">
                     <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_50px_rgba(23,60,52,.08)]">
                         <img
-                            src={resort.image_url || resort.image || '/abuyog-2.jpg'}
+                            src={mainImage}
                             alt={isEllenFuentesTravellersInn ? "Ellen Fuentes Traveller's Inn exterior" : isFlorinaCountryLodge ? 'Florina Country Lodge exterior' : isHabitatBudgetInn ? 'Habitat Budget Inn entrance corridor' : isVillageCondotel ? 'The Village Condotel exterior' : resort.name}
                             className="h-[360px] w-full object-cover md:h-[500px]"
                         />
+                        {resort.images?.filter((image) => image.url !== mainImage).length ? (
+                            <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4">
+                                {resort.images.filter((image) => image.url !== mainImage).map((image) => (
+                                    <img key={image.id} src={image.url} alt={`${resort.name} photo`} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
+                                ))}
+                            </div>
+                        ) : null}
                         <div className="grid gap-8 p-6 md:p-10 lg:grid-cols-[1.5fr_0.9fr]">
                             <div>
                                 <p className="text-xs font-bold tracking-[0.22em] text-[#bd8b3d] uppercase">

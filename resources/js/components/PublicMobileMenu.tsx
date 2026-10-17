@@ -7,7 +7,7 @@ const links = [
     { label: 'Discover', href: '/discover' },
     { label: 'Resorts', href: '/resorts' },
     { label: 'History', href: '/#history' },
-    { label: 'Festivals & Events', href: '/#festival' },
+    { label: 'Festivals & Events', href: '/events' },
     { label: 'Travel Guide', href: '/travel-guide' },
     { label: 'Map', href: '/map' },
     { label: 'About', href: '/#welcome' },

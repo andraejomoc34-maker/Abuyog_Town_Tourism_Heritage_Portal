@@ -7,6 +7,8 @@ use App\Models\Cottage;
 use App\Models\Inquiry;
 use App\Models\Resort;
 use App\Models\User;
+use App\Services\ContentChangeLogger;
+use App\Services\ContentImageManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -60,7 +62,7 @@ class AdminResortController extends Controller
         return $this->renderDashboard('settings');
     }
 
-    public function updateSettings(Request $request): RedirectResponse
+    public function updateSettings(Request $request, ContentImageManager $imageManager, ContentChangeLogger $history): RedirectResponse
     {
         $user = $request->user();
 
@@ -74,9 +76,28 @@ class AdminResortController extends Controller
             'location' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'contact_information' => ['nullable', 'string', 'max:255'],
+            'remove_primary_image' => ['sometimes', 'boolean'],
+            ...ContentImageManager::validationRules(),
         ]);
 
-        Resort::query()->findOrFail($user->resort_id)->update($validated);
+        $images = $validated['images'] ?? [];
+        $removeImageIds = $validated['remove_image_ids'] ?? [];
+        $removePrimaryImage = (bool) ($validated['remove_primary_image'] ?? false);
+        unset($validated['images'], $validated['remove_image_ids'], $validated['remove_primary_image']);
+        $resort = Resort::query()->findOrFail($user->resort_id);
+
+        $imageManager->transaction(function (ContentImageManager $manager) use ($resort, $validated, $images, $removeImageIds, $removePrimaryImage, $history, $user): void {
+            $before = $history->snapshot($resort);
+
+            if ($removePrimaryImage) {
+                $validated['image_url'] = null;
+                $validated['image'] = null;
+            }
+
+            $resort->update($validated);
+            $manager->sync($resort, $images, $removeImageIds);
+            $history->record($user, $resort, 'edited', $before, $history->snapshot($resort));
+        });
 
         return redirect()->route('resort-admin.settings')->with('success', 'Resort profile updated.');
     }
@@ -100,7 +121,7 @@ class AdminResortController extends Controller
             abort(403);
         }
 
-        $resort = $user->resort_id ? Resort::query()->find($user->resort_id) : null;
+        $resort = $user->resort_id ? Resort::query()->with('images')->find($user->resort_id) : null;
 
         if ($user->role === 'resort_admin' && ($resort === null || $user->resort_id !== $resort->id)) {
             abort(403);

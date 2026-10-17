@@ -19,6 +19,7 @@ class PublicAnnouncementController extends Controller
                 ->where('published_at', '<=', now())
                 ->latest('published_at')
                 ->limit(6)
+                ->with('images')
                 ->get(['id', 'title', 'slug', 'excerpt', 'category', 'featured_image', 'published_at'])
                 ->map(fn (Announcement $announcement): array => [
                     'id' => $announcement->id,
@@ -28,7 +29,8 @@ class PublicAnnouncementController extends Controller
                     'category' => $announcement->category,
                     'featuredImageUrl' => $announcement->featured_image
                         ? Storage::disk('public')->url($announcement->featured_image)
-                        : null,
+                        : $announcement->images->first()?->url,
+                    'images' => $announcement->images->map(fn ($image): array => ['url' => $image->url])->all(),
                     'publishedAt' => $announcement->published_at?->toIso8601String(),
                 ]),
         ]);
@@ -42,6 +44,7 @@ class PublicAnnouncementController extends Controller
             ->where('status', 'Published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
+            ->with('images')
             ->firstOrFail();
 
         return Inertia::render('announcements/Show', [
@@ -52,7 +55,8 @@ class PublicAnnouncementController extends Controller
                 'category' => $entry->category,
                 'featuredImageUrl' => $entry->featured_image
                     ? Storage::disk('public')->url($entry->featured_image)
-                    : null,
+                    : $entry->images->first()?->url,
+                'images' => $entry->images->map(fn ($image): array => ['url' => $image->url])->all(),
                 'publishedAt' => $entry->published_at?->toIso8601String(),
                 'author' => 'Abuyog Municipal Tourism Office',
             ],

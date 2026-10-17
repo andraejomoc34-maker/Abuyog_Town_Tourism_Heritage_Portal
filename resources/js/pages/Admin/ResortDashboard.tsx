@@ -1,7 +1,9 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import FlashMessages from '../../components/FlashMessages';
 import NotificationBell from '../../components/NotificationBell';
+import MultipleImageUpload, { type ExistingContentImage } from '../../components/MultipleImageUpload';
 
 type ResortInfo = {
     id?: number;
@@ -9,6 +11,7 @@ type ResortInfo = {
     location?: string;
     image?: string | null;
     image_url?: string | null;
+    images?: { id: number; url: string }[];
     contact_information?: string | null;
     description?: string | null;
 };
@@ -138,6 +141,7 @@ export default function ResortDashboard({
     cottageAvailability?: { id: number; name: string; status: string; availableQuantity: number }[];
 }) {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const flash = usePage<{ flash?: { success?: string; error?: string } }>().props.flash;
     const currentSection = section ?? 'dashboard';
     const activeCalendarMonth = calendarMonth ?? new Date().toISOString().slice(0, 7);
     const [calendarYear, calendarMonthNumber] = activeCalendarMonth.split('-').map(Number);
@@ -156,7 +160,18 @@ export default function ResortDashboard({
         location: resort?.location ?? '',
         description: resort?.description ?? '',
         contact_information: resort?.contact_information ?? '',
+        images: [] as File[],
+        remove_image_ids: [] as number[],
+        remove_primary_image: false,
     });
+    const existingResortImages: ExistingContentImage[] = [
+        ...((resort?.image_url || resort?.image) && !settingsForm.data.remove_primary_image
+            ? [{ id: null, url: (resort.image_url || resort.image)!, label: 'Current resort cover image' }]
+            : []),
+        ...(resort?.images ?? [])
+            .filter((image) => !settingsForm.data.remove_image_ids.includes(image.id))
+            .map((image) => ({ ...image, label: 'Current resort gallery image' })),
+    ];
     const titleMap: Record<DashboardSection, string> = {
         dashboard: 'Overview',
         calendar: 'Booking calendar',
@@ -186,6 +201,7 @@ export default function ResortDashboard({
         <>
             <Head title={titleMap[currentSection]} />
             <div className="min-h-screen bg-[#f8f3e8] text-[#173c34]">
+                <div className="px-4 pt-4"><FlashMessages success={flash?.success} error={flash?.error} /></div>
                 <div className="mx-auto flex max-w-[1600px] flex-col lg:flex-row">
                     {mobileOpen && (
                         <button
@@ -555,7 +571,7 @@ export default function ResortDashboard({
 
                         {currentSection === 'settings' && (
                             <section className="mt-8 rounded-[28px] border border-[#e9e0d0] bg-white p-5 shadow-[0_18px_45px_rgba(23,60,52,.06)] sm:p-6">
-                                <h3 className="font-serif text-2xl text-[#173c34]">Resort profile</h3>
+                                <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-serif text-2xl text-[#173c34]">Resort profile</h3><Link href="/content-history" className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4">Content history</Link></div>
                                 <p className="mt-1 text-sm text-[#718078]">Profile details currently maintained in the portal.</p>
                                 <form onSubmit={(event) => { event.preventDefault(); settingsForm.patch('/resort-admin/settings', { preserveScroll: true }); }} className="mt-5 space-y-4">
                                     <div className="grid gap-4 sm:grid-cols-2">
@@ -576,6 +592,21 @@ export default function ResortDashboard({
                                         <textarea value={settingsForm.data.description} onChange={(event) => settingsForm.setData('description', event.target.value)} rows={5} maxLength={5000} className="mt-1.5 w-full rounded-xl border border-[#ded6c8] px-3 py-2.5 text-sm font-normal outline-none focus:border-[#bd8b3d]" />
                                         {settingsForm.errors.description && <span className="mt-1 block text-xs text-red-700">{settingsForm.errors.description}</span>}
                                     </label>
+                                    <MultipleImageUpload
+                                        id="resort-profile-images"
+                                        files={settingsForm.data.images}
+                                        existingImages={existingResortImages}
+                                        errors={settingsForm.errors}
+                                        progress={settingsForm.progress?.percentage}
+                                        onFilesChange={(files) => settingsForm.setData('images', files)}
+                                        onRemoveExisting={(image) => {
+                                            if (image.id === null) {
+                                                settingsForm.setData('remove_primary_image', true);
+                                            } else {
+                                                settingsForm.setData('remove_image_ids', [...settingsForm.data.remove_image_ids, image.id]);
+                                            }
+                                        }}
+                                    />
                                     <button type="submit" disabled={settingsForm.processing} className="rounded-none bg-[#173c34] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
                                         {settingsForm.processing ? 'Saving…' : 'Save resort profile'}
                                     </button>

@@ -42,7 +42,7 @@ const categories: DiscoverCategory[] = [
     },
     {
         name: 'FESTIVALS & EVENTS',
-        href: '/discover/buyogan-festival',
+        href: '/events',
         description: 'Experience local celebrations and memorable community events.',
         icon: Flower2,
         accent: 'bg-[#f4ebed]',
@@ -73,6 +73,7 @@ export default function DiscoverIndex({
         location?: string | null;
         category?: string | null;
         image_url?: string | null;
+        images?: { id: number; url: string }[];
     }>;
 }) {
     return (
@@ -178,11 +179,18 @@ export default function DiscoverIndex({
                                         className="overflow-hidden rounded-2xl border border-[#e3ddcf] bg-white shadow-[0_12px_35px_rgba(23,60,52,0.05)]"
                                     >
                                         <img
-                                            src={spot.image_url || '/island-paradise-3.jpg'}
+                                            src={spot.image_url || spot.images?.[0]?.url || '/island-paradise-3.jpg'}
                                             alt={spot.name}
                                             className="h-52 w-full object-cover"
                                         />
                                         <div className="p-5">
+                                            {spot.images && spot.images.length > 1 && (
+                                                <div className="mb-4 grid grid-cols-3 gap-2">
+                                                    {spot.images.slice(0, 3).map((image) => (
+                                                        <img key={image.id} src={image.url} alt={`${spot.name} photo`} loading="lazy" className="aspect-[4/3] w-full rounded-md object-cover" />
+                                                    ))}
+                                                </div>
+                                            )}
                                             <p className="text-[10px] font-bold tracking-[0.14em] text-[#bd8b3d] uppercase">
                                                 {spot.category || 'Tourist Spot'}
                                             </p>

@@ -19,13 +19,13 @@ class EnsureUserIsActive
     {
         $user = $request->user();
 
-        if ($user instanceof User && ! $user->is_active) {
+        if ($user instanceof User && ! $user->refresh()->is_active) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()->route('login')->withErrors([
-                'email' => 'This account has been disabled.',
+                'email' => 'This account has been disabled. Please contact the portal administrator if you believe this is an error.',
             ]);
         }
 

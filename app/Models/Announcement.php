@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Announcement extends Model
 {
@@ -18,12 +19,22 @@ class Announcement extends Model
         'published_at',
         'created_by',
         'resort_id',
+        'event_start_date',
+        'event_end_date',
+        'event_start_time',
+        'event_venue',
+        'event_organizer',
+        'event_contact_information',
+        'event_source_url',
+        'event_date_status',
     ];
 
     protected function casts(): array
     {
         return [
             'published_at' => 'datetime',
+            'event_start_date' => 'date:Y-m-d',
+            'event_end_date' => 'date:Y-m-d',
         ];
     }
 
@@ -35,5 +46,10 @@ class Announcement extends Model
     public function resort(): BelongsTo
     {
         return $this->belongsTo(Resort::class);
+    }
+
+    public function images(): MorphMany
+    {
+        return $this->morphMany(ContentImage::class, 'imageable')->orderBy('sort_order')->orderBy('id');
     }
 }

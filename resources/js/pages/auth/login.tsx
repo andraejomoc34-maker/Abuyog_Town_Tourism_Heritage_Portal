@@ -100,6 +100,9 @@ export default function Login({ status }: { status?: string | null }) {
                 Don&apos;t have an account?{' '}
                 <Link href={register().url}>Create an account</Link>
             </p>
+            <p className="auth-switch">
+                <Link href="/report-concern">Report suspected scam or abusive activity</Link>
+            </p>
             <Link className="guest-link" href={home().url}>
                 Continue as guest <span aria-hidden="true">→</span>
             </Link>

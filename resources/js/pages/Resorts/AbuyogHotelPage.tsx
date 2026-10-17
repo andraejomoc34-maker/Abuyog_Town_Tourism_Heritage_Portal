@@ -40,6 +40,7 @@ type Hotel = {
     contact_information?: string | null;
     amenities?: string[] | null;
     price_information?: string | null;
+    images?: { id: number; url: string }[];
     hotel_rooms?: HotelRoom[];
 };
 
@@ -424,7 +425,13 @@ export default function AbuyogHotelPage({
                             <p className="text-xs font-semibold tracking-[0.2em] text-[#a96d22]">A CLOSER LOOK</p>
                             <h2 className="mt-3 text-3xl font-semibold sm:text-4xl">Hotel gallery</h2>
                             <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-                                {galleryImages.map((image, index) => (
+                                {[
+                                    ...galleryImages,
+                                    ...(resort.images ?? []).map((image) => ({
+                                        src: image.url,
+                                        alt: `${resort.name} visitor photo`,
+                                    })),
+                                ].map((image, index) => (
                                     <figure key={image.src} className={index === 0 ? 'col-span-2 row-span-2' : ''}>
                                         <img
                                             src={image.src}

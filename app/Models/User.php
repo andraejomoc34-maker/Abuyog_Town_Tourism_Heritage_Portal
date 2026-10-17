@@ -28,7 +28,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'contact_number', 'password', 'role', 'resort_id', 'facebook_id', 'facebook_avatar', 'profile_photo_path', 'is_active'])]
+#[Fillable(['name', 'email', 'contact_number', 'password', 'role', 'resort_id', 'facebook_id', 'facebook_avatar', 'profile_photo_path', 'is_active', 'disabled_reason', 'disabled_by', 'disabled_at'])]
 #[Hidden(['password', 'remember_token'])]
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable
@@ -60,6 +60,7 @@ class User extends Authenticatable
             'facebook_avatar' => 'string',
             'profile_photo_path' => 'string',
             'is_active' => 'boolean',
+            'disabled_at' => 'datetime',
         ];
     }
 
@@ -100,5 +101,10 @@ class User extends Authenticatable
     public function announcements(): HasMany
     {
         return $this->hasMany(Announcement::class, 'created_by');
+    }
+
+    public function accountSecurityEvents(): HasMany
+    {
+        return $this->hasMany(AccountSecurityEvent::class, 'target_user_id');
     }
 }
