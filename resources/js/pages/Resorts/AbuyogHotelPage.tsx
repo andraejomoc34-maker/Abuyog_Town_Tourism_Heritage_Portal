@@ -1,5 +1,22 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowUpRight, BedDouble, MapPin, Menu, X } from 'lucide-react';
+import {
+    Armchair,
+    ArrowUpRight,
+    BedDouble,
+    Building2,
+    Car,
+    Coffee,
+    Gift,
+    Mail,
+    MapPin,
+    Menu,
+    Phone,
+    Sparkles,
+    Utensils,
+    Wifi,
+    type LucideIcon,
+    X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 type HotelRoom = {
@@ -51,6 +68,17 @@ const roomImageOverrides: Record<string, { src: string; alt: string }> = {
     },
 };
 
+const amenityIcons: Record<string, LucideIcon> = {
+    'Comfortable Beds': BedDouble,
+    'In-Room Wi-Fi': Wifi,
+    'Parking Area': Car,
+    Lounge: Armchair,
+    Restaurant: Utensils,
+    'Function Hall': Building2,
+    'Free Breakfast': Coffee,
+    'Complimentary Supplies': Gift,
+};
+
 const navigation = [
     { label: 'Home', href: '#home' },
     { label: 'Our Rooms', href: '#rooms' },
@@ -88,6 +116,19 @@ export default function AbuyogHotelPage({
     const inquiryHref = `/resorts/${resort.id}/inquire`;
     const rooms = resort.hotel_rooms ?? [];
     const amenities = resort.amenities ?? [];
+    const contactLines = (resort.contact_information ?? '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    const phoneNumber = contactLines
+        .find((line) => /^(phone|contact number):/i.test(line))
+        ?.replace(/^(phone|contact number):\s*/i, '');
+    const emailAddress = contactLines
+        .find((line) => /^email:/i.test(line))
+        ?.replace(/^email:\s*/i, '');
+    const otherContactInformation = contactLines.filter(
+        (line) => !/^(phone|contact number|email):/i.test(line),
+    );
 
     return (
         <>
@@ -354,14 +395,19 @@ export default function AbuyogHotelPage({
                     <section id="amenities" className="scroll-mt-24 border-y border-[#173c34]/10 bg-[#f1eadb] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
                         <div className="mx-auto grid max-w-[1280px] gap-6 sm:grid-cols-[0.7fr_1.3fr] sm:items-center">
                             <div>
-                                <p className="text-xs font-semibold tracking-[0.2em] text-[#a96d22]">YOUR STAY</p>
+                                <p className="text-xs font-semibold tracking-[0.2em] text-[#a96d22]">LISTED IN THE PROMOTIONAL POSTER</p>
                                 <h2 className="mt-3 text-3xl font-semibold">Amenities</h2>
                             </div>
                             {amenities.length > 0 ? (
-                                <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                                <ul className="grid gap-3 sm:grid-cols-2">
                                     {amenities.map((amenity) => (
-                                        <li key={amenity} className="border-b border-[#173c34]/20 py-3 text-sm text-[#344b43]">
-                                            {amenity}
+                                        <li key={amenity} className="flex min-h-16 items-center gap-4 border border-[#173c34]/10 bg-[#fffdf8] px-4 py-3 text-sm font-medium text-[#344b43] shadow-sm sm:px-5">
+                                            {(() => {
+                                                const Icon = amenityIcons[amenity] ?? Sparkles;
+
+                                                return <Icon aria-hidden="true" className="shrink-0 text-[#a96d22]" size={21} strokeWidth={1.7} />;
+                                            })()}
+                                            <span>{amenity}</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -419,9 +465,22 @@ export default function AbuyogHotelPage({
                                     <MapPin aria-hidden="true" size={16} />
                                     {resort.location || 'Abuyog, Leyte, Philippines'}
                                 </p>
-                                {resort.contact_information ? (
-                                    <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/75">{resort.contact_information}</p>
-                                ) : (
+                                {phoneNumber && (
+                                    <a href={`tel:${phoneNumber.replace(/[^\d+]/g, '')}`} className="mt-3 flex w-fit items-center gap-2 text-sm text-white/75 transition-colors hover:text-[#edbd73] focus-visible:outline-2 focus-visible:outline-[#edbd73]">
+                                        <Phone aria-hidden="true" size={16} />
+                                        {phoneNumber}
+                                    </a>
+                                )}
+                                {emailAddress && (
+                                    <a href={`mailto:${emailAddress}`} className="mt-3 flex w-fit items-center gap-2 break-all text-sm text-white/75 transition-colors hover:text-[#edbd73] focus-visible:outline-2 focus-visible:outline-[#edbd73]">
+                                        <Mail aria-hidden="true" size={16} />
+                                        {emailAddress}
+                                    </a>
+                                )}
+                                {otherContactInformation.length > 0 && (
+                                    <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/75">{otherContactInformation.join('\n')}</p>
+                                )}
+                                {contactLines.length === 0 && (
                                     <p className="mt-3 text-sm leading-6 text-white/75">Contact details are not currently listed.</p>
                                 )}
                                 {canInquire && (

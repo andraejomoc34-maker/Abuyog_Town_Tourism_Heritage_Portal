@@ -14,25 +14,33 @@ class AbuyogHotelSeeder extends Seeder
      */
     public function run(): void
     {
-        $hotel = Resort::query()->firstOrCreate(
-            ['property_code' => 'abuyog-hotel'],
-            [
-                'name' => 'Abuyog Hotel',
-                'description' => 'Comfortable hotel accommodation in Abuyog, Leyte.',
-                'location' => 'Abuyog, Leyte',
-                'image' => '/Abuyog-hotel.jpg',
-                'image_url' => '/Abuyog-hotel.jpg',
-                'contact_information' => null,
-                'amenities' => null,
-                'price_information' => 'Room rates shown are transcribed from the provided brochure and have not been confirmed as current. The brochure also lists single extra bed at PHP 300.00 and double extra bed at PHP 600.00; confirm all rates with the hotel.',
-                'status' => 'active',
-                'property_type' => 'hotel',
-                'property_code' => 'abuyog-hotel',
+        $hotel = Resort::query()
+            ->where('property_code', 'abuyog-hotel')
+            ->first()
+            ?? Resort::query()->where('name', 'Abuyog Hotel')->first()
+            ?? new Resort;
+
+        $hotel->fill([
+            'name' => 'Abuyog Hotel',
+            'description' => 'Abuyog Hotel is located on Avenida Rizal Street in Abuyog, Leyte, Philippines.',
+            'location' => 'Avenida Rizal Street, Abuyog, Leyte, Philippines',
+            'image' => $hotel->image ?: '/Abuyog-hotel.jpg',
+            'image_url' => $hotel->image_url ?: '/Abuyog-hotel.jpg',
+            'contact_information' => "Phone: 09276030650\nEmail: abuyoghotel111@gmail.com",
+            'amenities' => [
+                'Comfortable Beds',
+                'In-Room Wi-Fi',
+                'Parking Area',
+                'Lounge',
+                'Restaurant',
+                'Function Hall',
+                'Free Breakfast',
+                'Complimentary Supplies',
             ],
-        );
-        if ($hotel->property_type !== 'hotel') {
-            $hotel->update(['property_type' => 'hotel']);
-        }
+            'status' => $hotel->status ?: 'active',
+            'property_type' => 'hotel',
+            'property_code' => 'abuyog-hotel',
+        ])->save();
 
         $roomTypes = [
             ['Standard Room', 2200, '/Abuyog-hotel-room.jpg'],

@@ -28,6 +28,7 @@ type Hotel = {
     location?: string | null;
     description?: string | null;
     contact_information?: string | null;
+    amenities?: string[] | null;
     price_information?: string | null;
 };
 type Room = {
@@ -338,6 +339,7 @@ export default function HotelDashboard({
         location: hotel.location ?? '',
         description: hotel.description ?? '',
         contact_information: hotel.contact_information ?? '',
+        amenities: (hotel.amenities ?? []).join('\n'),
         price_information: hotel.price_information ?? '',
     });
     const newRoomForm = useForm({
@@ -692,7 +694,8 @@ export default function HotelDashboard({
                                         <label className="block text-sm font-medium">Hotel name<input value={settingsForm.data.name} onChange={(event) => settingsForm.setData('name', event.target.value)} className={formFieldClasses} required />{settingsForm.errors.name && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.name}</span>}</label>
                                         <label className="block text-sm font-medium">Location<input value={settingsForm.data.location} onChange={(event) => settingsForm.setData('location', event.target.value)} className={formFieldClasses} required />{settingsForm.errors.location && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.location}</span>}</label>
                                         <label className="block text-sm font-medium">Description<textarea rows={4} value={settingsForm.data.description} onChange={(event) => settingsForm.setData('description', event.target.value)} className={formFieldClasses} /></label>
-                                        <label className="block text-sm font-medium">Contact information<input value={settingsForm.data.contact_information} onChange={(event) => settingsForm.setData('contact_information', event.target.value)} className={formFieldClasses} /></label>
+                                        <label className="block text-sm font-medium">Contact information<textarea rows={3} value={settingsForm.data.contact_information} onChange={(event) => settingsForm.setData('contact_information', event.target.value)} className={formFieldClasses} /><span className="mt-1 block text-xs text-[#718078]">Use one detail per line, for example: Phone: 09276030650 and Email: abuyoghotel111@gmail.com.</span>{settingsForm.errors.contact_information && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.contact_information}</span>}</label>
+                                        <label className="block text-sm font-medium">Facilities and amenities<textarea rows={8} value={settingsForm.data.amenities} onChange={(event) => settingsForm.setData('amenities', event.target.value)} className={formFieldClasses} /><span className="mt-1 block text-xs text-[#718078]">Enter one amenity per line. Up to 30 entries, 100 characters each.</span>{settingsForm.errors.amenities && <span className="mt-1 block text-xs text-rose-700">{settingsForm.errors.amenities}</span>}</label>
                                         <label className="block text-sm font-medium">Price information<textarea rows={3} value={settingsForm.data.price_information} onChange={(event) => settingsForm.setData('price_information', event.target.value)} className={formFieldClasses} /></label>
                                     </div>
                                     <button disabled={settingsForm.processing} className="mt-5 rounded-none bg-[#173c34] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">Save profile</button>

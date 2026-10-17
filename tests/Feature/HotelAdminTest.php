@@ -90,6 +90,7 @@ it('does not grant hotel admins resort, municipality or super-admin access', fun
 
 it('allows the assigned hotel admin to edit hotel details but not ownership or role', function () {
     $hotel = createHotelForTest();
+    $hotel->update(['amenities' => ['Existing amenity']]);
     $otherHotel = createHotelForTest('Another Hotel');
     $admin = createHotelAdminForTest($hotel);
 
@@ -118,8 +119,81 @@ it('allows the assigned hotel admin to edit hotel details but not ownership or r
         'role' => 'hotel_admin',
         'resort_id' => $hotel->id,
     ]);
+    expect($hotel->fresh()->amenities)->toBe(['Existing amenity']);
 
     $this->get('/hotel-admin')->assertOk();
+});
+
+it('updates hotel contact details and amenities from the profile editor', function () {
+    $hotel = createHotelForTest();
+    $admin = createHotelAdminForTest($hotel);
+    $contactInformation = "Phone: 09276030650\nEmail: abuyoghotel111@gmail.com";
+    $amenities = implode("\n", [
+        'Comfortable Beds',
+        'In-Room Wi-Fi',
+        'Parking Area',
+        'Lounge',
+        'Restaurant',
+        'Function Hall',
+        'Free Breakfast',
+        'Complimentary Supplies',
+    ]);
+
+    $this->actingAs($admin)
+        ->from('/hotel-admin/profile')
+        ->patch('/hotel-admin/settings', [
+            'name' => 'Abuyog Hotel',
+            'location' => 'Avenida Rizal Street, Abuyog, Leyte, Philippines',
+            'description' => 'Abuyog Hotel is located on Avenida Rizal Street in Abuyog, Leyte, Philippines.',
+            'contact_information' => $contactInformation,
+            'amenities' => $amenities,
+        ])
+        ->assertRedirect('/hotel-admin/profile');
+
+    $hotel->refresh();
+    expect($hotel->contact_information)->toBe($contactInformation)
+        ->and($hotel->amenities)->toBe([
+            'Comfortable Beds',
+            'In-Room Wi-Fi',
+            'Parking Area',
+            'Lounge',
+            'Restaurant',
+            'Function Hall',
+            'Free Breakfast',
+            'Complimentary Supplies',
+        ]);
+});
+
+it('updates the existing Abuyog Hotel record when the hotel seeder runs', function () {
+    $hotel = createHotelForTest();
+    $hotel->update([
+        'description' => 'Old hotel description.',
+        'location' => 'Abuyog, Leyte',
+        'contact_information' => 'Old contact number',
+        'amenities' => null,
+    ]);
+
+    $this->seed(AbuyogHotelSeeder::class);
+
+    $this->assertDatabaseCount('resorts', 1);
+    $this->assertDatabaseHas('resorts', [
+        'id' => $hotel->id,
+        'name' => 'Abuyog Hotel',
+        'description' => 'Abuyog Hotel is located on Avenida Rizal Street in Abuyog, Leyte, Philippines.',
+        'location' => 'Avenida Rizal Street, Abuyog, Leyte, Philippines',
+        'contact_information' => "Phone: 09276030650\nEmail: abuyoghotel111@gmail.com",
+        'property_code' => 'abuyog-hotel',
+    ]);
+    expect($hotel->fresh()->amenities)->toBe([
+        'Comfortable Beds',
+        'In-Room Wi-Fi',
+        'Parking Area',
+        'Lounge',
+        'Restaurant',
+        'Function Hall',
+        'Free Breakfast',
+        'Complimentary Supplies',
+    ]);
 });
 
 it('stores uploaded room images on the public disk', function () {

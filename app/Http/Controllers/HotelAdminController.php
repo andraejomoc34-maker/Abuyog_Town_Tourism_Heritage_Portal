@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -202,9 +203,24 @@ class HotelAdminController extends Controller
             'location' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'contact_information' => ['nullable', 'string', 'max:255'],
+            'amenities' => ['nullable', 'string', 'max:3000'],
             'price_information' => ['nullable', 'string', 'max:5000'],
         ]);
 
+        if (array_key_exists('amenities', $validated)) {
+            $amenities = preg_split('/\R/u', $validated['amenities'] ?? '', -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $amenities = array_values(array_filter(array_map('trim', $amenities), static fn (string $amenity): bool => $amenity !== ''));
+
+            $validatedAmenities = Validator::make(
+                ['amenities' => $amenities],
+                [
+                    'amenities' => ['array', 'max:30'],
+                    'amenities.*' => ['required', 'string', 'max:100', 'distinct'],
+                ],
+            )->validate();
+
+            $validated['amenities'] = $validatedAmenities['amenities'];
+        }
         $hotel->update($validated);
 
         return back()->with('success', 'Hotel profile updated.');
