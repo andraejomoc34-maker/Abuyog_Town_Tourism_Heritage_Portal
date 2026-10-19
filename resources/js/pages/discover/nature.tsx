@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { Search, X } from 'lucide-react';
 import PublicMobileMenu from '../../components/PublicMobileMenu';
+import PortalLogo from '../../components/PortalLogo';
+import resorts from '../../routes/resorts';
 
 const categories = [
     'All Destinations',
@@ -19,15 +21,15 @@ function normalizeSearchText(value: string): string {
 
 const places = [
     {
-        title: 'Coastal Landscapes',
-        category: 'Beaches & Shoreline',
-        filterCategories: ['Beaches & Shoreline'],
-        location: 'Abuyog, Leyte',
+        title: 'Maliguicay Falls',
+        category: 'Waterfalls',
+        filterCategories: ['Waterfalls'],
+        location: 'Abuyog area, Leyte',
         description:
-            'Discover open shoreline and coastal scenery. Check local guidance before planning a visit.',
-        image: '/island-paradise-3.jpg',
-        alt: 'Coastal scenery used as a sample nature destination image',
-        href: '/discover',
+            'Discover Maliguicay Falls, a natural attraction surrounded by greenery and flowing water. Explore the destination and check local access conditions before planning your visit.',
+        image: '/abuyog-9.jpg',
+        alt: 'Tropical greenery used as a sample waterfall destination image',
+        href: resorts.show(4).url,
     },
     {
         title: 'Castañas Resort & Riverside',
@@ -38,7 +40,7 @@ const places = [
             'Find a quieter pace among the waterways and green landscapes of the area.',
         image: '/abuyog-2.jpg',
         alt: 'Green landscape used as a sample riverside destination image',
-        href: '/resorts',
+        href: resorts.show(2).url,
     },
     {
         title: 'Valida Mountain Resort',
@@ -49,18 +51,7 @@ const places = [
             'Explore the region’s natural scenery. Confirm trail access and conditions locally.',
         image: '/abuyog-4.jpg',
         alt: 'Natural landscape used as a sample mountain destination image',
-        href: '/resorts',
-    },
-    {
-        title: 'Maliguicay Falls',
-        category: 'Waterfalls',
-        filterCategories: ['Waterfalls'],
-        location: 'Abuyog area, Leyte',
-        description:
-            'Use this sample listing as a starting point for finding waterfalls and nearby nature spots.',
-        image: '/abuyog-9.jpg',
-        alt: 'Tropical greenery used as a sample waterfall destination image',
-        href: '/resorts',
+        href: resorts.show(3).url,
     },
 ];
 
@@ -68,9 +59,7 @@ function PageNavigation() {
     return (
         <header className="relative z-30 mx-auto flex w-full max-w-7xl items-center justify-between gap-5 px-6 py-6 lg:px-10">
             <Link href="/" className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">
-                    {'\u2726'}
-                </span>
+                <PortalLogo />
                 <span>
                     <strong className="block text-sm tracking-[0.24em]">
                         ABUYOG TOURISM
@@ -128,8 +117,9 @@ export default function Nature() {
             place.filterCategories.includes(activeCategory);
         const matchesSearch =
             normalizedQuery.length === 0 ||
-            normalizeSearchText(`${place.title} ${place.category} ${place.location} ${place.description}`)
-                .includes(normalizedQuery);
+            normalizeSearchText(
+                `${place.title} ${place.category} ${place.location} ${place.description}`,
+            ).includes(normalizedQuery);
 
         return matchesCategory && matchesSearch;
     });
@@ -181,11 +171,16 @@ export default function Nature() {
                     </div>
                     <div className="mb-8 space-y-5">
                         <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#dedfd8] bg-white px-4 text-[#718078] focus-within:border-[#bd8b3d]">
-                            <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
+                            <Search
+                                aria-hidden="true"
+                                className="h-4 w-4 shrink-0"
+                            />
                             <input
                                 aria-label="Search destinations in Abuyog"
                                 className="min-w-0 flex-1 border-0 bg-transparent py-3 text-sm text-[#173c34] outline-none placeholder:text-[#718078] focus:ring-0"
-                                onChange={(event) => setSearchQuery(event.target.value)}
+                                onChange={(event) =>
+                                    setSearchQuery(event.target.value)
+                                }
                                 placeholder="Search destinations in Abuyog…"
                                 type="search"
                                 value={searchQuery}
@@ -270,7 +265,8 @@ export default function Nature() {
                                 No destinations found
                             </h3>
                             <p className="mt-2 text-sm text-[#718078]">
-                                Try another search or clear the filters to see all destinations.
+                                Try another search or clear the filters to see
+                                all destinations.
                             </p>
                             <button
                                 className="mt-5 inline-flex items-center rounded-full bg-[#173c34] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#24564b]"

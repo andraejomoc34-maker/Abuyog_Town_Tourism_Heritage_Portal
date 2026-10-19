@@ -12,6 +12,7 @@ class PublicAnnouncementController extends Controller
     public function index(): Response
     {
         return Inertia::render('welcome', [
+            'websiteUrl' => (string) config('app.url'),
             'announcements' => Announcement::query()
                 ->whereNull('resort_id')
                 ->where('status', 'Published')

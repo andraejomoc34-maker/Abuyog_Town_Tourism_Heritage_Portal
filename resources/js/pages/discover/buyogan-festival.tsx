@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CalendarDays, MapPin, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import PublicMobileMenu from '../../components/PublicMobileMenu';
+import PortalLogo from '../../components/PortalLogo';
 
 const photos = [
     {
@@ -123,9 +124,7 @@ export default function BuyoganFestival() {
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,39,34,.92)_0%,rgba(11,50,43,.68)_55%,rgba(8,36,32,.40)_100%),linear-gradient(0deg,rgba(8,36,32,.78)_0%,transparent_68%)]" />
                     <header className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between gap-5 px-6 py-6 lg:px-10">
                         <Link href="/" className="flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">
-                                {'\u2726'}
-                            </span>
+                            <PortalLogo />
                             <span>
                                 <strong className="block text-sm tracking-[0.24em]">
                                     ABUYOG TOURISM
@@ -165,7 +164,7 @@ export default function BuyoganFestival() {
                             </Link>
                         </nav>
                         <Link
-                            className="hidden shrink-0 items-center gap-2 rounded-none bg-white px-4 py-2.5 text-xs font-semibold text-[#173c34] transition hover:bg-[#f6e5bd] sm:inline-flex"
+                            className="hidden shrink-0 items-center gap-2 rounded-none bg-black px-4 py-2.5 text-xs font-semibold text-[#173c34] transition hover:bg-[#f6e5bd] sm:inline-flex"
                             href="/discover"
                         >
                             <ArrowLeft className="h-4 w-4" />

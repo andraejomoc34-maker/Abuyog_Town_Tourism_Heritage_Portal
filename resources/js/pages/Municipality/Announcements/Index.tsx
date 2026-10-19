@@ -66,7 +66,7 @@ export default function AnnouncementIndex({
     return (
         <>
             <Head title="Announcements" />
-            <main className="min-h-screen bg-[#f8f3e8] px-5 py-8 text-[#173c34] sm:px-8">
+            <main className="min-h-screen bg-[#f8f3e8] px-5 py-8 text-white sm:px-8">
                 <div className="mx-auto max-w-6xl">
                     <FlashMessages success={flash?.success} error={flash?.error} />
                     <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-[#ded7c8] pb-5">
@@ -80,7 +80,7 @@ export default function AnnouncementIndex({
                             </Link>
                             <Link className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4" href="/content-history">Content history</Link>
                             <Link className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#173c34] px-4 text-sm font-semibold text-white hover:bg-[#245548]" href={`${baseUrl}/create`}>
-                                <FilePlus2 className="h-4 w-4 text-[#edbd73]" />
+                                <FilePlus2 className="h-4 w-4 text-white" />
                                 Create Announcement
                             </Link>
                         </div>

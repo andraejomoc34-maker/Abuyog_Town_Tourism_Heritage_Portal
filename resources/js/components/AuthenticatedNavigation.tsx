@@ -1,12 +1,13 @@
 import { Link, router } from '@inertiajs/react';
 import PublicMobileMenu from './PublicMobileMenu';
+import PortalLogo from './PortalLogo';
 
 export default function AuthenticatedNavigation() {
     return (
         <header className="bg-[#123d36] text-white">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-10">
                 <Link href="/" className="flex items-center gap-3">
-                    <img src="/Bee%20Symbol.jpg" alt="Bee Symbol" className="h-10 w-10 shrink-0 object-contain" />
+                    <PortalLogo />
                     <span>
                         <strong className="block text-sm tracking-[0.24em]">
                             ABUYOG TOURISM

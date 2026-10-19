@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import PublicMobileMenu from '../../components/PublicMobileMenu';
+import PortalLogo from '../../components/PortalLogo';
 
 const experiences = [
     {
@@ -48,9 +49,7 @@ function PageNavigation() {
     return (
         <header className="relative z-30 mx-auto flex w-full max-w-7xl items-center justify-between gap-5 px-6 py-6 lg:px-10">
             <Link href="/" className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">
-                    {'\u2726'}
-                </span>
+                <PortalLogo />
                 <span>
                     <strong className="block text-sm tracking-[0.24em]">
                         ABUYOG TOURISM
@@ -87,7 +86,7 @@ function PageNavigation() {
                 </Link>
             </nav>
             <Link
-                className="hidden shrink-0 rounded-none bg-white px-4 py-2.5 text-xs font-semibold text-[#173c34] transition hover:bg-[#f6e5bd] sm:inline-flex"
+                className="hidden shrink-0 rounded-none bg-gold px-4 py-2.5 text-xs font-semibold text-[#173c34] transition hover:bg-[#f6e5bd] sm:inline-flex"
                 href="/"
             >
                 Back to Discover

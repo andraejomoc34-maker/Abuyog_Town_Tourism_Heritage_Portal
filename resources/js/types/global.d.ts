@@ -12,6 +12,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            websiteUrl?: string;
             announcements?: Array<{
                 id: number;
                 title: string;

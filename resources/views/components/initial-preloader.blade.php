@@ -34,7 +34,7 @@
     <div aria-hidden="true" class="initial-preloader__shade"></div>
     <div class="initial-preloader__content">
         <img
-            alt=""
+            alt="Abuyog Tourism and Heritage Portal bee logo"
             class="initial-preloader__logo"
             src="{{ asset(config('preloader.logo')) }}"
         >

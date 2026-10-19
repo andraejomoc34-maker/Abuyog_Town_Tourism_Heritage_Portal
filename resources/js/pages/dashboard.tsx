@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import NotificationBell from '../components/NotificationBell';
+import PortalLogo from '../components/PortalLogo';
 
 type IconName =
     | 'dashboard'
@@ -185,9 +186,7 @@ export default function Dashboard() {
                         href="/"
                         className="flex items-center gap-3 no-underline"
                     >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#bd8b3d] text-lg text-[#bd8b3d]">
-                            {'\u2726'}
-                        </span>
+                        <PortalLogo />
                         <span>
                             <strong className="block text-[11px] tracking-[0.18em] text-[#123d36]">
                                 ABUYOG TOURISM

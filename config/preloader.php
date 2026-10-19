@@ -5,7 +5,7 @@ return [
     'fade_duration_ms' => 350,
     'video' => 'Abuyog-Preloader.mp4',
     'fallback_image' => 'abuyog-8.jpg',
-    'logo' => 'favicon.png',
+    'logo' => 'Bee Symbol.jpg',
     'title' => 'Discover Abuyog',
     'subtitle' => 'Explore the beauty, history, and culture of Abuyog, Leyte.',
     'loading_label' => 'Preparing your journey',

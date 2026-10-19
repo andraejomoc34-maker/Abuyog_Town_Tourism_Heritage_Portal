@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, Clock3, ExternalLink, MapPin, Phone, UserRound } from 'lucide-react';
 import PublicMobileMenu from '../../components/PublicMobileMenu';
+import PortalLogo from '../../components/PortalLogo';
 
 type EventRecord = {
     id: number;
@@ -188,7 +189,7 @@ export default function EventsCalendar({
                 <header className="border-b border-white/10 bg-[#123d36] text-white">
                     <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-10">
                         <Link href="/" className="flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">✦</span>
+                            <PortalLogo />
                             <span>
                                 <strong className="block text-sm tracking-[0.24em]">ABUYOG TOURISM</strong>
                                 <small className="mt-1 block text-[10px] tracking-[0.2em] text-white/65">TOURISM &amp; HERITAGE</small>

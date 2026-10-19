@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import MultipleImageUpload, { type ExistingContentImage } from '../../components/MultipleImageUpload';
+import PortalLogo from '../../components/PortalLogo';
 
 type Section = 'dashboard' | 'bookings' | 'calendar' | 'rooms' | 'guests' | 'reports' | 'profile' | 'settings';
 type Hotel = {
@@ -458,9 +459,7 @@ export default function HotelDashboard({
                     <aside id="hotel-admin-sidebar" className={`fixed inset-y-0 left-0 z-40 w-[min(19rem,86vw)] overflow-y-auto bg-[#173c34] px-5 py-6 text-white transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:shrink-0 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="flex items-start justify-between gap-3 border-b border-white/15 px-2 pb-6">
                             <div className="flex items-start gap-3">
-                                <span className="mt-1 flex h-10 w-10 items-center justify-center border border-[#d99d4b]/70 text-[#edbd73]">
-                                    <HotelIcon aria-hidden="true" size={20} strokeWidth={1.5} />
-                                </span>
+                                <PortalLogo className="mt-1 h-10 w-10 shrink-0 rounded-full object-contain" />
                                 <div>
                                     <p className="text-[10px] font-semibold tracking-[0.2em] text-[#edbd73]">HOTEL ADMIN</p>
                                     <p className="mt-2 text-base font-semibold">Abuyog Hotel Admin</p>

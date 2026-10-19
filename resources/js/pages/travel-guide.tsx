@@ -11,6 +11,7 @@ import {
     WalletCards,
 } from 'lucide-react';
 import PublicMobileMenu from '../components/PublicMobileMenu';
+import PortalLogo from '../components/PortalLogo';
 
 const arrivalOptions = [
     {
@@ -79,9 +80,7 @@ export default function TravelGuide() {
                 <header className="border-b border-[#e3ddcf] bg-[#123d36] text-white">
                     <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6 lg:px-10">
                         <Link href="/" className="flex items-center gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">
-                                ★
-                            </span>
+                            <PortalLogo />
                             <span>
                                 <strong className="block text-sm tracking-[0.24em]">
                                     ABUYOG TOURISM

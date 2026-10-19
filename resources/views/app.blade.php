@@ -5,8 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}" sizes="any">
-        <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
+        <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}" sizes="128x128">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" sizes="180x180">
 
         @fonts
 

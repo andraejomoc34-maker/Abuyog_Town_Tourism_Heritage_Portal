@@ -92,7 +92,7 @@ body {
     width: clamp(54px, 8vw, 82px);
     height: auto;
     margin-bottom: clamp(18px, 4vh, 32px);
-    border-radius: 50%;
+    object-fit: contain;
     box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
 }
 .initial-preloader__eyebrow {
@@ -304,14 +304,13 @@ a {
     text-decoration: none;
 }
 .brand__mark {
-    display: grid;
     width: 32px;
     height: 32px;
-    place-items: center;
+    flex: 0 0 auto;
     border: 1px solid currentColor;
     border-radius: 50%;
-    color: var(--gold);
-    font-size: 14px;
+    background-color: white;
+    object-fit: contain;
 }
 .brand strong,
 .brand small {
@@ -552,5 +551,334 @@ a {
     }
     .auth-heading {
         margin-top: 50px;
+    }
+}
+
+.history-book__frame {
+    position: relative;
+    isolation: isolate;
+    padding: 12px;
+    border: 1px solid #ded0b2;
+    border-radius: 5px;
+    background: linear-gradient(120deg, #eadcc0, #f6edda 48%, #e5d3b2);
+    box-shadow:
+        0 25px 55px rgba(34, 43, 35, 0.16),
+        0 4px 12px rgba(34, 43, 35, 0.08);
+}
+
+.history-book__frame::before {
+    position: absolute;
+    z-index: -1;
+    inset: 8px 5px 8px 14px;
+    border-right: 4px solid #f6efdf;
+    border-radius: 3px;
+    content: '';
+    box-shadow: 4px 0 0 #d8c7a7;
+}
+
+.history-book__spread {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border-radius: 2px;
+}
+
+.history-book__page {
+    display: flex;
+    min-width: 0;
+    min-height: 690px;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(28px, 4vw, 54px) clamp(25px, 4vw, 52px) 24px;
+    background-color: #fffdf7;
+    color: #26352f;
+    animation: history-book-page-enter 280ms ease-out both;
+}
+
+.history-book__page:first-child {
+    background-image: linear-gradient(
+        90deg,
+        rgba(85, 66, 38, 0.045),
+        transparent 12%,
+        transparent 86%,
+        rgba(83, 62, 36, 0.075)
+    );
+}
+
+.history-book__page:last-child {
+    background-image: linear-gradient(
+        90deg,
+        rgba(83, 62, 36, 0.075),
+        transparent 14%,
+        transparent 94%,
+        rgba(85, 66, 38, 0.045)
+    );
+}
+
+.history-book__page + .history-book__page {
+    border-left: 1px solid rgba(129, 105, 66, 0.2);
+}
+
+.history-book__page-content {
+    min-width: 0;
+}
+
+.history-book__page-heading {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.history-book__eyebrow {
+    margin: 0 0 11px;
+    color: #a27632;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.history-book__page-heading h2 {
+    margin: 0;
+    color: #153e35;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.55rem, 2.4vw, 2.05rem);
+    font-weight: 500;
+    line-height: 1.18;
+}
+
+.history-book__page-heading .history-book__cover-title {
+    color: #123d36;
+    font-size: clamp(3.2rem, 6vw, 5rem);
+    font-weight: 600;
+    letter-spacing: 0.11em;
+}
+
+.history-book__subtitle {
+    margin: 12px 0 0;
+    color: #a27632;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1rem;
+    font-style: italic;
+}
+
+.history-book__cover-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: -7px 0 19px;
+    color: #a27632;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.17em;
+}
+
+.history-book__cover-logo img {
+    border: 1px solid #ddc99f;
+    background: white;
+}
+
+.history-book__body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 0.91rem;
+    line-height: 1.76;
+}
+
+.history-book__body > p {
+    margin: 0 0 15px;
+    text-align: left;
+}
+
+.history-book__page--cover .history-book__body > p {
+    color: #384b40;
+    font-size: 0.96rem;
+    line-height: 1.82;
+    text-align: center;
+}
+
+.history-book__figure {
+    margin: 20px 0 0;
+    padding: 9px;
+    border: 1px solid #e6dcc7;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.history-book__image {
+    display: block;
+    width: 100%;
+    height: 205px;
+    object-fit: contain;
+    background: #f5f0e5;
+}
+
+.history-book__page--cover .history-book__image {
+    height: 230px;
+    background: white;
+}
+
+.history-book__figure figcaption {
+    display: grid;
+    gap: 5px;
+    margin-top: 8px;
+    color: #66736b;
+    font-family: Arial, sans-serif;
+    font-size: 0.66rem;
+    line-height: 1.45;
+}
+
+.history-book__figure figcaption a,
+.history-book__references a {
+    color: #42664e;
+    text-decoration: underline;
+    text-decoration-color: #c9ae77;
+    text-underline-offset: 2px;
+}
+
+.history-book__figure figcaption a:hover,
+.history-book__references a:hover {
+    color: #9b6a28;
+}
+
+.history-book__section-title {
+    margin: 19px 0 8px;
+    color: #153e35;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.history-book__references,
+.history-book__credits {
+    margin: 0;
+    padding-left: 20px;
+    font-family: Arial, sans-serif;
+    font-size: 0.68rem;
+    line-height: 1.55;
+}
+
+.history-book__references li,
+.history-book__credits li {
+    margin: 0 0 5px;
+    padding-left: 2px;
+}
+
+.history-book__credits {
+    color: #59675e;
+}
+
+.history-book__page-number {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(129, 105, 66, 0.18);
+    color: #8c8b7c;
+    font-family: Arial, sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+}
+
+.history-book__spine {
+    position: absolute;
+    z-index: 1;
+    top: 12px;
+    bottom: 12px;
+    left: 50%;
+    width: 18px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+        90deg,
+        rgba(66, 49, 29, 0.13),
+        rgba(255, 255, 255, 0.66) 48%,
+        rgba(66, 49, 29, 0.14)
+    );
+    pointer-events: none;
+}
+
+.history-book__control {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid #d8c8a8;
+    background: #fffdf8;
+    color: #173c34;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition:
+        background-color 150ms ease,
+        border-color 150ms ease,
+        color 150ms ease;
+}
+
+.history-book__control:hover:not(:disabled) {
+    border-color: #bd8b3d;
+    background: #f3ead8;
+}
+
+.history-book__control:focus-visible {
+    outline: 2px solid #bd8b3d;
+    outline-offset: 2px;
+}
+
+.history-book__control:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+}
+
+@keyframes history-book-page-enter {
+    from {
+        opacity: 0.55;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 767px) {
+    .history-book__frame {
+        padding: 7px;
+    }
+
+    .history-book__frame::before {
+        inset: 6px 3px 6px 8px;
+    }
+
+    .history-book__spread {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .history-book__page {
+        min-height: 620px;
+        padding: 32px 24px 22px;
+    }
+
+    .history-book__page + .history-book__page {
+        border-left: 0;
+    }
+
+    .history-book__spine {
+        display: none;
+    }
+
+    .history-book__body {
+        font-size: 0.9rem;
+    }
+
+    .history-book__image,
+    .history-book__page--cover .history-book__image {
+        height: 210px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .history-book__page {
+        animation: none;
     }
 }

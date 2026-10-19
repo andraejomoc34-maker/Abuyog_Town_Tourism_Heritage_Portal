@@ -20,6 +20,7 @@ import {
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import NotificationBell from '../../components/NotificationBell';
+import PortalLogo from '../../components/PortalLogo';
 
 type DashboardStats = {
     totalTouristSpots: number;
@@ -120,12 +121,17 @@ export default function MunicipalityDashboard({
                 )}
                 <aside id="municipality-navigation" className={`fixed inset-y-0 left-0 z-40 w-[min(18rem,86vw)] overflow-y-auto border-r border-[#ded7c8] bg-white transition-transform duration-200 lg:z-20 lg:w-72 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     <div className="border-b border-[#ece5d8] px-5 py-5">
-                        <p className="text-[10px] font-bold tracking-[0.2em] text-[#9b6a28]">
-                            ABUYOG MUNICIPAL
-                        </p>
-                        <h1 className="mt-1 font-serif text-xl leading-tight">
-                            Tourism Office
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <PortalLogo className="h-10 w-10 shrink-0 rounded-full object-contain" />
+                            <div>
+                                <p className="text-[10px] font-bold tracking-[0.2em] text-[#9b6a28]">
+                                    ABUYOG MUNICIPAL
+                                </p>
+                                <h1 className="mt-1 font-serif text-xl leading-tight">
+                                    Tourism Office
+                                </h1>
+                            </div>
+                        </div>
                         <p className="mt-2 truncate text-xs text-[#68766f]">
                             {user.name}
                         </p>
@@ -201,7 +207,7 @@ export default function MunicipalityDashboard({
                             <div className="flex items-center gap-3">
                                 <NotificationBell />
                                 <Link
-                                    className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#173c34] px-4 text-sm font-semibold text-white transition hover:bg-[#245548]"
+                                    className="inline-flex min-h-10 items-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-white transition hover:bg-[#245548]"
                                     href="/municipality-admin/announcements/create"
                                 >
                                     <Megaphone className="h-4 w-4 text-[#edbd73]" />

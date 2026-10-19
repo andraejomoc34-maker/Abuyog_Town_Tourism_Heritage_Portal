@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { home } from '@/routes';
 import PublicMobileMenu from './PublicMobileMenu';
+import PortalLogo from './PortalLogo';
 
 type AuthShellProps = {
     eyebrow: string;
@@ -42,9 +43,7 @@ export default function AuthShell({
                     )}
                     <div className="auth-visual__topline">
                         <Link href={home()} className="brand brand--light">
-                            <span className="brand__mark" aria-hidden="true">
-                                ✦
-                            </span>
+                            <PortalLogo className="brand__mark" />
                             <span>
                                 <strong>ABUYOG</strong>
                                 <small>Town Tourism</small>
@@ -69,9 +68,6 @@ export default function AuthShell({
                 <section className="auth-panel">
                     <div className="auth-panel__inner">
                         <Link href={home()} className="brand brand--dark">
-                            <span className="brand__mark" aria-hidden="true">
-                                ✦
-                            </span>
                             <span>
                                 <strong>ABUYOG</strong>
                                 <small>

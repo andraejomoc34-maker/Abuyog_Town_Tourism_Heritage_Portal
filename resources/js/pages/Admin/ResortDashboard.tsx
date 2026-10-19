@@ -3,6 +3,7 @@ import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import FlashMessages from '../../components/FlashMessages';
 import NotificationBell from '../../components/NotificationBell';
+import PortalLogo from '../../components/PortalLogo';
 import MultipleImageUpload, { type ExistingContentImage } from '../../components/MultipleImageUpload';
 
 type ResortInfo = {
@@ -213,9 +214,7 @@ export default function ResortDashboard({
                     )}
                     <aside id="resort-admin-navigation" className={`fixed inset-y-0 left-0 z-40 w-[min(19rem,86vw)] overflow-y-auto border-r border-[#e9e0d0] bg-[#123d36] p-5 text-white transition-transform duration-200 lg:relative lg:inset-auto lg:z-auto lg:w-[290px] lg:shrink-0 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#d99d4b] text-sm font-bold text-[#123d36]">
-                                {resort?.name ? resort.name.slice(0, 2).toUpperCase() : 'RT'}
-                            </div>
+                            <PortalLogo className="h-12 w-12 shrink-0 rounded-xl object-contain" />
                             <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#f2cd8b]">
                                     Resort admin

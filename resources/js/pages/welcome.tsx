@@ -1,6 +1,8 @@
-﻿import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import PublicMobileMenu from '../components/PublicMobileMenu';
+import PortalLogo from '../components/PortalLogo';
+import WebsiteQrCode from '../components/WebsiteQrCode';
 import {
     BusFront,
     Heart,
@@ -22,6 +24,7 @@ const heroImages = [
      '/Abuyog-hotel-1.jpg',
      '/The village.jpg',
      '/abuyog-2.jpg',
+     '/abuyog-8.jpg',
      '/Abuyog-hotel-2.jpg',
      '/The village-1.jpg',
      '/Abuyog-hotel-room-1.jpg',
@@ -228,7 +231,7 @@ const travelGuide = [
 ];
 
 export default function Welcome() {
-    const { auth, announcements = [] } = usePage().props;
+    const { auth, announcements = [], websiteUrl = '' } = usePage().props;
     const [activeHeroImage, setActiveHeroImage] = useState(0);
     const [isHeroImageVisible, setIsHeroImageVisible] = useState(true);
     const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -303,11 +306,7 @@ export default function Welcome() {
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,39,34,.9)_0%,rgba(11,50,43,.55)_48%,rgba(8,36,32,.25)_100%),linear-gradient(0deg,rgba(8,36,32,.82)_0%,transparent_55%)]" />
                     <header className="relative z-30 mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6 lg:px-10">
                         <Link href="/" className="flex items-center gap-3">
-                            <img
-                                src="/Bee%20Symbol.jpg"
-                                alt="Bee Symbol"
-                                className="h-9 w-9 shrink-0 object-contain sm:h-[38px] sm:w-[38px] lg:h-[42px] lg:w-[42px]"
-                            />
+                            <PortalLogo className="h-9 w-9 shrink-0 object-contain sm:h-[38px] sm:w-[38px] lg:h-[42px] lg:w-[42px]" />
                             <span>
                                 <strong className="block text-sm tracking-[0.24em]">
                                     ABUYOG TOURISM
@@ -665,6 +664,13 @@ export default function Welcome() {
                                 from early local history to its heritage and
                                 tourism today.
                             </p>
+                            <Link
+                                className="mt-6 inline-flex items-center gap-2 border border-[#e4b866]/60 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                                href="/discover/heritage"
+                            >
+                                Read the history book
+                                <span aria-hidden="true">{'\u2192'}</span>
+                            </Link>
                         </div>
 
                         <ol className="mt-12 space-y-5 sm:mt-16">
@@ -886,6 +892,8 @@ export default function Welcome() {
                     </div>
                 </section>
 
+                <WebsiteQrCode websiteUrl={websiteUrl} />
+
                 <section
                     id="feedback"
                     className="bg-[#f8f3e8] px-6 py-14 sm:py-16 lg:px-10"
@@ -1062,9 +1070,7 @@ export default function Welcome() {
                                     href="/"
                                     className="flex items-center gap-3"
                                 >
-                                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4b866] text-xl text-[#e4b866]">
-                                        {'\u2726'}
-                                    </span>
+                                    <PortalLogo />
                                     <span>
                                         <strong className="block text-sm tracking-[0.24em]">
                                             ABUYOG TOURISM
