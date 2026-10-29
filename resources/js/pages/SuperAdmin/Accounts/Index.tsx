@@ -92,7 +92,7 @@ export default function AdminAccountsIndex({
                             <Link className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4" href="/content-history">Content history</Link>
                             <Link className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4" href="/super-admin/account-reports">Scam reports</Link>
                             <Link className="text-sm font-semibold text-[#245548] underline decoration-[#d99d4b] underline-offset-4" href="/super-admin/account-security-history">Security history</Link>
-                            <Link className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#173c34] px-4 text-sm font-semibold text-white" href="/super-admin/accounts/create">
+                            <Link className="inline-flex min-h-10 items-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-black" href="/super-admin/accounts/create">
                                 <UserPlus className="h-4 w-4 text-[#edbd73]" />
                                 Create Account
                             </Link>

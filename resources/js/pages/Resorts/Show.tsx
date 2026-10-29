@@ -487,7 +487,7 @@ export default function ResortShow({
                                     {canBookNow ? (
                                         <Link
                                             href={`/resorts/${resort.id}/book`}
-                                            className="rounded-none bg-[#d99d4b] px-5 py-3 text-center text-sm font-semibold text-black"
+                                            className="rounded-none bg-white px-5 py-3 text-center text-sm font-semibold text-black"
                                         >
                                             Book Now
                                         </Link>

@@ -59,14 +59,14 @@ const destinations = [
         title: 'Natural Wonders',
         description:
             'Find quiet shores, green trails, and landscapes shaped by island life.',
-        image: 'island-paradise-3.jpg',
+        image: 'abuyog-Malaguicay.jpg',
         alt: 'Tropical turquoise coastline with a sandy beach',
     },
     {
         title: 'Heritage & History',
         description:
             'Walk through the places and memories that continue to shape Abuyog.',
-        image: 'balsa-kafe.jpg',
+        image: 'Abuyog bee.jpg',
         alt: 'Historic temple surrounded by warm evening light',
     },
     {
@@ -341,6 +341,12 @@ export default function Welcome() {
                             >
                                 Discover
                             </a>
+                            <Link
+                                className="transition hover:text-[#e4b866]"
+                                href="/local-foods"
+                            >
+                                Local Foods
+                            </Link>
                             <a
                                 className="transition hover:text-[#e4b866]"
                                 href="#heritage"

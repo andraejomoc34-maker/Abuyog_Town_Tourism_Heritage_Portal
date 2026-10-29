@@ -115,14 +115,14 @@ const destinations = [
         category: 'Natural Attraction',
         description:
             'Take in the quiet beauty of the coast and its open skies.',
-        image: '/Abuyog-5.jpg',
+        image: '/abuyog-Malaguicay.jpg',
     },
     {
         name: 'Heritage & History',
         location: 'Abuyog, Leyte',
         category: 'Heritage Site',
         description: 'Explore the places and stories that shape the town.',
-        image: '/balsa-kafe.jpg',
+        image: '/Abuyog bee.jpg',
     },
     {
         name: 'Culture & Festival',

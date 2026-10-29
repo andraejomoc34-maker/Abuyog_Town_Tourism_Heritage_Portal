@@ -22,17 +22,24 @@ export default defineConfig({
             formVariants: true,
         }),
     ]),
-    server: {
-        watch: {
-            ignored: [
-                '**/.agents/**',
-                '**/.claude/**',
-                '**/.cursor/**',
-                '**/.junie/**',
-                '**/vendor/**',
-            ],
-        },
+    
+   server: {
+    host: '0.0.0.0',
+    strictPort: true,
+    hmr: {
+        host: 'localhost',
     },
+    watch: {
+        ignored: [
+            '**/.agents/**',
+            '**/.claude/**',
+            '**/.cursor/**',
+            '**/.junie/**',
+            '**/vendor/**',
+        ],
+    },
+},
+
     lint: {
         ignorePatterns: [
             'vendor/**',

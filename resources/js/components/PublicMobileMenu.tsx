@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 const links = [
     { label: 'Home', href: '/#home' },
     { label: 'Discover', href: '/discover' },
+    { label: 'Local Foods & Restaurants', href: '/local-foods' },
     { label: 'Resorts', href: '/resorts' },
     { label: 'History', href: '/#history' },
     { label: 'Festivals & Events', href: '/events' },
@@ -70,7 +71,7 @@ export default function PublicMobileMenu({
                     ) : (
                         <>
                             <Link href="/login" onClick={closeMenu} tabIndex={open ? 0 : -1} className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium hover:bg-[#f3efe7]">Log in</Link>
-                            <Link href="/register" onClick={closeMenu} tabIndex={open ? 0 : -1} className="flex min-h-11 items-center rounded-lg bg-[#173c34] px-3 text-sm font-semibold text-white hover:bg-[#245548]">Register</Link>
+                            <Link href="/register" onClick={closeMenu} tabIndex={open ? 0 : -1} className="flex min-h-11 items-center rounded-lg bg-[#d99d4b] px-3 text-sm font-semibold text-[#173c34] transition-colors hover:bg-[#f6e5bd] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#173c34]">Register</Link>
                         </>
                     )}
                 </div>

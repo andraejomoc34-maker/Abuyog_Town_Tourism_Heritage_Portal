@@ -10,6 +10,7 @@ use App\Http\Controllers\ContentHistoryController;
 use App\Http\Controllers\DestinationViewController;
 use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\FoodBusinessController;
 use App\Http\Controllers\HotelAdminController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\MunicipalityAdminController;
@@ -32,6 +33,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 Route::get('/', [PublicAnnouncementController::class, 'index'])->name('home');
+Route::get('/local-foods', [FoodBusinessController::class, 'index'])->name('local-foods.index');
 Route::get('/announcements/{announcement}', [PublicAnnouncementController::class, 'show'])->name('announcements.show');
 Route::get('/events', PublicEventCalendarController::class)->name('events.index');
 Route::post('/destination-views', [DestinationViewController::class, 'store'])

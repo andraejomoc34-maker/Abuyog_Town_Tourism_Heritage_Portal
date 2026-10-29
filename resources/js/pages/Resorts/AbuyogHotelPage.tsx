@@ -249,7 +249,7 @@ export default function AbuyogHotelPage({
                             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
                                 <Link
                                     href={canBook ? bookingHref : '#rooms'}
-                                    className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d99d4b] px-8 text-sm font-semibold text-[#173c34] transition-colors hover:bg-[#edbd73] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                                    className="inline-flex min-h-12 items-center justify-center gap-2 bg-white px-8 text-sm font-semibold text-[#173c34] transition-colors hover:bg-[#edbd73] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
                                 >
                                     {canBook ? 'Book now' : 'Explore rooms'}
                                     <ArrowUpRight aria-hidden="true" size={16} />
@@ -345,7 +345,7 @@ export default function AbuyogHotelPage({
                                                 {isAvailable ? (
                                                     <Link
                                                         href={bookingHref}
-                                                        className="inline-flex min-h-11 shrink-0 items-center justify-center bg-[#f8f3e8] px-6 text-sm font-semibold text-white transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d99d4b]"
+                                                        className="inline-flex min-h-11 shrink-0 items-center justify-center bg-white px-6 text-sm font-semibold text-white transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d99d4b]"
                                                     >
                                                         Book now
                                                     </Link>

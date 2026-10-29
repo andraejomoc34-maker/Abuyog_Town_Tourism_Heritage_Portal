@@ -177,8 +177,18 @@ export default function MunicipalityDashboard({
                     </div>
                 </aside>
 
-                <main className="px-5 py-7 sm:px-8 lg:ml-72 lg:px-10 lg:py-9">
-                    <div className="mb-5 flex items-center justify-between lg:hidden">
+                <main className="relative isolate min-h-screen px-5 py-7 sm:px-8 lg:ml-72 lg:px-10 lg:py-9">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+                    >
+                        <div
+                            className="absolute -inset-3 bg-cover bg-center bg-no-repeat blur-[7px]"
+                            style={{ backgroundImage: "url('/abuyog-8.jpg')" }}
+                        />
+                        <div className="absolute inset-0 bg-[#f8f3e8]/80" />
+                    </div>
+                    <div className="relative z-10 mb-5 flex items-center justify-between lg:hidden">
                         <div>
                             <p className="text-[10px] font-bold tracking-[0.2em] text-[#9b6a28]">ABUYOG MUNICIPAL</p>
                             <p className="text-sm font-semibold">Tourism Office</p>
@@ -194,7 +204,7 @@ export default function MunicipalityDashboard({
                             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                         </button>
                     </div>
-                    <div className="mx-auto max-w-[1500px]">
+                    <div className="relative z-10 mx-auto max-w-[1500px]">
                         <div className="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-[#ded7c8] pb-6">
                             <div>
                                 <p className="text-[10px] font-bold tracking-[0.2em] text-[#9b6a28]">

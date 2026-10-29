@@ -137,7 +137,7 @@ export default function Nature() {
                     <img
                         alt=""
                         className="absolute inset-0 h-full w-full object-cover"
-                        src="/island-paradise-3.jpg"
+                        src="/abuyog-Malaguicay.jpg"
                     />
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,39,34,.9)_0%,rgba(11,50,43,.58)_55%,rgba(8,36,32,.25)_100%),linear-gradient(0deg,rgba(8,36,32,.72)_0%,transparent_65%)]" />
                     <PageNavigation />

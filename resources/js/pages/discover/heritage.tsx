@@ -261,7 +261,7 @@ function PageNavigation() {
                 </Link>
             </nav>
             <Link
-                className="hidden shrink-0 rounded-none bg-white px-4 py-2.5 text-xs font-semibold text-[#173c34] transition hover:bg-[#f6e5bd] sm:inline-flex"
+                className="hidden shrink-0 rounded-none bg-brown px-4 py-2.5 text-xs font-semibold text-[#173c34] transition hover:bg-[#f6e5bd] sm:inline-flex"
                 href="/"
             >
                 Back to Home
